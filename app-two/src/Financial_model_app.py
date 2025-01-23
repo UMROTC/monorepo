@@ -8,7 +8,7 @@ Monthly Bar Chart Race for Net Worth
 
 import pandas as pd
 import numpy as np
-import plotly as px
+import plotly.express as px
 import os
 
 # -------------------------------------------------------------------------
