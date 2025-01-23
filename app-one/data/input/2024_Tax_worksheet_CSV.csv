@@ -1,0 +1,13 @@
+Status,Type,Lower Bound,Upper Bound,Rate,Standard Deduction
+Single,Federal,0,11600,0.1,14600
+Single,Federal,11600,47150,0.12,14600
+Single,Federal,47150,100525,0.22,14600
+Single,Federal,100525,191950,0.24,14600
+Married,Federal,0,23200,0.1,29200
+Married,Federal,23200,94300,0.12,29200
+Married,Federal,94300,201050,0.22,29200
+Married,Federal,201050,383900,0.24,29200
+Single,State,0,20500,0.05,14600
+Single,State,20500,1000000,0.06,14600
+Married,State,0,41000,0.05,29200
+Married,State,41000,1000000,0.06,29200

@@ -1,0 +1,3 @@
+streamlit           # For building the interactive web app
+pandas              # For data manipulation and handling CSV files
+pathlib             # For handling file paths (part of Python's standard library)

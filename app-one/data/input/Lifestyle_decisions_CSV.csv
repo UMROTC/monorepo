@@ -1,0 +1,41 @@
+﻿Category,Option,Percentage,Monthly Cost
+Housing,Parents,,15.00
+Housing,Apartment,,650.00
+Housing,Small House,,1800.00
+Housing,Large House,,2800.00
+Housing,Military,,150.00
+Transportation,Public,,200.00
+Transportation,Small Car,,850.00
+Transportation,F-350 Lariat,,1400.00
+Phone,Prepaid,,25.00
+Phone,Old Model,,45.00
+Phone,Newest,,60.00
+Food,Subsistence,,20.00
+Food,Ramen,,250.00
+Food,Fresh Food,,400.00
+Food,Restaurant,,850.00
+Food,Military,,250.00
+Leisure,"Hiking, Gaming",,75.00
+Leisure,Sports or Movies,,200.00
+Leisure,Skiing or Gambling,,850.00
+Common Interests With Significant Other,Same,,125.00
+Common Interests With Significant Other,Moderate,,200.00
+Common Interests With Significant Other,Opposite ,,400.00
+Children,Zero,,0.00
+Children,One,,200.00
+Children,Two,,400.00
+Children,Three,,600.00
+Children,Four,,800.00
+Children,Military,,250.00
+Who Pays for College,Self,,0.00
+Who Pays for College,Military,,0.00
+Health Insurance,Medicaid,,250.00
+Health Insurance,Bronze,,750.00
+Health Insurance,Silver,,1100.00
+Health Insurance,Gold,,1750.00
+Health Insurance,Military,,274.00
+Savings,0,,0.00
+Savings,10%,10%,0.10
+Savings,25%,25%,0.25
+Savings,35%,35%,0.35
+Savings,whatever is left,,
