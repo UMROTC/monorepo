@@ -15,10 +15,6 @@ from pathlib import Path
 # -------------------------------------------------------------------------
 # 1. File Paths
 # -------------------------------------------------------------------------
-# File paths for local files in the repository
-
-output_csv_path = "financial_model_plot.csv"
-output_html_path = "plotly_bar_chart_race.html"
 
 # Get the current script's directory (app-two/src/)
 current_dir = Path(__file__).parent.resolve()
@@ -28,7 +24,11 @@ repo_root = current_dir.parent.parent
 
 # Define paths to App One's input CSVs
 participant_data_path = repo_root / 'app-one' / 'data' / 'input' / 'participant_data.csv'
-skillset_cost_path = repo_root / 'app-one' / 'data' / 'input' / 'Skillset_cost_worksheet_CSV.csv'
+skillset_cost_worksheet_path = repo_root / 'app-one' / 'data' / 'input' / 'Skillset_cost_worksheet_CSV.csv'
+
+# Define Paths to App Two's output CSVs
+output_csv_path = current_dir.parent / "data" / "output" / "financial_model_plot.csv"
+output_html_path = current_dir.parent / "data" / "output" / "plotly_bar_chart_race.html"
 
 # -------------------------------------------------------------------------
 # 2. Load & Merge
