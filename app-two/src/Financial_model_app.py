@@ -22,8 +22,8 @@ current_dir = Path(__file__).parent.resolve()
 # Define the monorepo root directory (two levels up from app-two/src/)
 repo_root = current_dir.parent.parent
 
-# Define paths to App One's input CSVs
-participant_data_path = repo_root / 'app-one' / 'data' / 'input' / 'participant_data.csv'
+# Define paths to App Two's input CSVs
+participant_data_path = repo_root / 'app-one' / 'data' / 'output' / 'participant_data.csv'
 skillset_cost_worksheet_path = repo_root / 'app-one' / 'data' / 'input' / 'Skillset_cost_worksheet_CSV.csv'
 
 # Define Paths to App Two's output CSVs
