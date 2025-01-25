@@ -14,8 +14,8 @@ tax_worksheet_path = repo_root / 'app-one' / 'data' / 'input' / '2024_Tax_worksh
 skillset_cost_path = repo_root / 'app-one' / 'data' / 'input' / 'Skillset_cost_worksheet_CSV.csv'
 lifestyle_decisions_path = repo_root / 'app-one' / 'data' / 'input' / 'Lifestyle_decisions_CSV.csv'
 
-# Define path to save output CSV in App Two's output directory
-output_csv_path = repo_root / 'app-two' / 'data' / 'output' / 'participant_data.csv'
+# Define path to save output CSV in App One's output directory
+output_csv_path = repo_root / 'app-one' / 'data' / 'output' / 'participant_data.csv'
 
 # Load the data from the CSV files using absolute paths
 try:
