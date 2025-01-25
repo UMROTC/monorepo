@@ -27,7 +27,7 @@ current_dir = Path(__file__).parent.resolve()
 repo_root = current_dir.parent.parent
 
 # Define paths to App One's input CSVs
-tax_worksheet_path = repo_root / 'app-one' / 'data' / 'input' / '2024_Tax_worksheet_CSV.csv'
+participant_data_path = repo_root / 'app-one' / 'data' / 'input' / 'participant_data.csv'
 skillset_cost_path = repo_root / 'app-one' / 'data' / 'input' / 'Skillset_cost_worksheet_CSV.csv'
 
 # -------------------------------------------------------------------------
