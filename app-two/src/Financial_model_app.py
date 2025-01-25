@@ -247,7 +247,7 @@ fig.update_layout(
         title="Career",
         x=1.05,
         y=1,
-        bgcolor="rgba(255, 255, 255, 0.8)",
+        bgcolor="Black",
         bordercolor="Black",
         borderwidth=1,
     ),
