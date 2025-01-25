@@ -262,6 +262,6 @@ try:
 except Exception as e:
     print("Error saving HTML file:", e)
 
-fig.show()
+st.plotly_chart(fig) 
 
 print("Script complete.")
