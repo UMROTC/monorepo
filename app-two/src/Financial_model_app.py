@@ -5,7 +5,7 @@ Monthly Bar Chart Race for Net Worth
 - Cleaned up layout calls to avoid duplication.
 - Slider and play/pause buttons at the bottom of the page.
 """
-
+import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
