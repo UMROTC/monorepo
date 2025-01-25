@@ -222,7 +222,7 @@ if participant_name and career and remaining_budget == 0:
     if submit:
         data = pd.DataFrame({
             "Name": [participant_name],
-            "Career": [career],
+            "Profession": [career],
             "Military Service": [selected_lifestyle_choices.get("Military Service", {}).get("Choice", "No")],
             "Savings": [savings],
         })
