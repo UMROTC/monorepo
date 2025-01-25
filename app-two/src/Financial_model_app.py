@@ -248,7 +248,7 @@ fig.update_layout(
         x=1.05,
         y=1,
         bgcolor="Black",
-        bordercolor="Black",
+        bordercolor="White",
         borderwidth=1,
     ),
 )
