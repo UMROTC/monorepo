@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import os
+from pathlib import Path
 
 # -------------------------------------------------------------------------
 # 1. File Paths
@@ -19,9 +20,15 @@ import os
 output_csv_path = "financial_model_plot.csv"
 output_html_path = "plotly_bar_chart_race.html"
 
-# Define paths to App Two's input CSVs
-tax_worksheet_path = 'app-one' / 'data' / 'input' / 'participant_data.csv'
-skillset_cost_path = 'app-one' / 'data' / 'input' / 'Skillset_cost_worksheet_CSV.csv'
+# Get the current script's directory (app-two/src/)
+current_dir = Path(__file__).parent.resolve()
+
+# Define the monorepo root directory (two levels up from app-two/src/)
+repo_root = current_dir.parent.parent
+
+# Define paths to App One's input CSVs
+tax_worksheet_path = repo_root / 'app-one' / 'data' / 'input' / '2024_Tax_worksheet_CSV.csv'
+skillset_cost_path = repo_root / 'app-one' / 'data' / 'input' / 'Skillset_cost_worksheet_CSV.csv'
 
 # -------------------------------------------------------------------------
 # 2. Load & Merge
