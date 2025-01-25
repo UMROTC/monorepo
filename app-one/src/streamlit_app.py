@@ -17,7 +17,7 @@ lifestyle_decisions_path = repo_root / 'app-one' / 'data' / 'input' / 'Lifestyle
 # Define path to save output CSV in App One's output directory
 output_csv_path = repo_root / 'app-one' / 'data' / 'output' / 'participant_data.csv'
 
-# Load the data from the CSV files using absolute paths
+# Load the data from the CSV files
 try:
     tax_data = pd.read_csv(tax_worksheet_path)
     skillset_data = pd.read_csv(skillset_cost_path)
@@ -26,6 +26,7 @@ except FileNotFoundError as e:
     st.error(f"Error loading CSV files: {e}")
     st.stop()
 
+# Convert numeric columns safely
 skillset_data["Savings During School"] = pd.to_numeric(skillset_data["Savings During School"], errors="coerce").fillna(0)
 skillset_data["Average Salary"] = pd.to_numeric(skillset_data["Average Salary"], errors="coerce").fillna(0)
 
@@ -83,19 +84,32 @@ participant_name = st.text_input("Name")
 st.header("Step 2: Choose Your Career")
 career = st.selectbox("Select a Career", skillset_data["Profession"])
 selected_career = skillset_data[skillset_data["Profession"] == career].iloc[0]
-if selected_career["Requires School"] == "yes":
+
+# Step 3: Military Service
+st.header("Step 3: Military Service")
+military_service_choice = st.selectbox("Choose your military service option", ["No", "Part Time", "Full Time"], key="Military_Service")
+
+# Now determine final salary:
+# If the career requires school, but the user is Part Time or Full Time military => 
+#   "college is paid for" => use Average Salary instead of Savings During School.
+if selected_career["Requires School"] == "yes" and military_service_choice in ["Part Time", "Full Time"]:
+    st.write("Because you are serving in the military, your college expenses are covered.")
+    salary = selected_career["Average Salary"]
+elif selected_career["Requires School"] == "yes":
+    # No military => use 'Savings During School'
     salary = selected_career["Savings During School"]
 else:
+    # Does not require school => use 'Average Salary'
     salary = selected_career["Average Salary"]
 
-# Step 3: Marital Status
-st.header("Step 3: Choose Your Marital Status")
+# Step 4: Marital Status
+st.header("Step 4: Choose Your Marital Status")
 marital_status = st.radio("Marital Status", ["Single", "Married"])
 
+# Calculate taxes
 taxable_income, federal_tax, state_tax, total_tax = calculate_tax_by_status(salary, marital_status, tax_data)
-
-# Display Standard Deduction and Taxable Income
 standard_deduction = tax_data[tax_data['Status'] == marital_status].iloc[0]['Standard Deduction']
+
 st.write(f"**Annual Salary:** ${salary:,.2f}")
 st.write(f"Standard Deduction: ${standard_deduction:,.2f}")
 st.write(f"Taxable Income: ${taxable_income:,.2f}")
@@ -103,7 +117,7 @@ st.write(f"Federal Tax: ${federal_tax:,.2f}")
 st.write(f"State Tax: ${state_tax:,.2f}")
 st.write(f"Total Tax: ${total_tax:,.2f}")
 
-# Calculate Monthly Income After Tax
+# Calculate monthly income after tax
 monthly_income_after_tax = (salary - federal_tax - state_tax) / 12
 st.write(f"**Monthly Income After Tax:** ${monthly_income_after_tax:,.2f}")
 
@@ -112,27 +126,26 @@ st.sidebar.header("Remaining Monthly Budget")
 remaining_budget_display = st.sidebar.empty()
 remaining_budget_message = st.sidebar.empty()
 
-# Initialize variables
-remaining_budget = monthly_income_after_tax  # Reset remaining budget to the monthly income after tax
+# Initialize budget tracking
+remaining_budget = monthly_income_after_tax
 expenses = 0
 savings = 0
 selected_lifestyle_choices = {}
 
-# Step 4: Military Service
-st.header("Step 4: Military Service")
-military_service_choice = st.selectbox("Choose your military service option", ["No", "Part Time", "Full Time"], key="Military_Service")
+# Record military service choice in the summary
 selected_lifestyle_choices["Military Service"] = {"Choice": military_service_choice, "Cost": 0}
 
-# Define restrictions based on military service
+# Adjust the restricted options so that "Military" is only removed for "No" service:
 restricted_options = {
     "No": ["Military"],
-    "Part Time": ["Military"],
+    "Part Time": [],   # <--- ALLOW "Military" for part-time
     "Full Time": []
 }
 
-# Handle lifestyle categories except savings
+# Step 5: Make Lifestyle Choices (except Savings)
 st.header("Step 5: Make Lifestyle Choices")
 lifestyle_categories = list(lifestyle_data["Category"].unique())
+
 for idx, category in enumerate(lifestyle_categories):
     if category == "Savings":
         continue  # Skip savings for now
@@ -142,64 +155,65 @@ for idx, category in enumerate(lifestyle_categories):
 
     # Restrict "Military" option if necessary
     if "Military" in options and military_service_choice in restricted_options:
-        options = [option for option in options if option not in restricted_options[military_service_choice]]
+        options = [
+            option for option in options 
+            if option not in restricted_options[military_service_choice]
+        ]
 
-     # Unique key for each category
     choice = st.selectbox(
         f"Choose your {category.lower()}",
         options,
         key=f"{category}_choice_{idx}"
     )
 
-    # Get the cost of the selected option
     cost = lifestyle_data[
         (lifestyle_data["Category"] == category) & (lifestyle_data["Option"] == choice)
     ]["Monthly Cost"].values[0]
 
-    # Check if the option exceeds the budget
     if remaining_budget - cost < 0:
-        st.error(f"Warning: Choosing {choice} for {category} exceeds your budget by ${abs(remaining_budget - cost):,.2f}!")
-        remaining_budget -= cost  # Allow the choice but show the negative value
+        st.error(
+            f"Warning: Choosing {choice} for {category} exceeds your budget by "
+            f"${abs(remaining_budget - cost):,.2f}!"
+        )
+        remaining_budget -= cost
     else:
-        remaining_budget -= cost  # Subtract cost if within budget
+        remaining_budget -= cost
 
-    # Update expenses and save choice
     expenses += cost
     selected_lifestyle_choices[category] = {"Choice": choice, "Cost": cost}
 
-# Handle savings category separately
+# Step 5b: Savings
 st.subheader("Savings")
 savings_options = lifestyle_data[lifestyle_data["Category"] == "Savings"]["Option"].tolist()
 savings_choice = st.selectbox("Choose your savings option", savings_options, key="Savings_Choice")
 
-# Handle "Whatever is left" logic
+# Handle "whatever is left" logic
 if savings_choice.lower() == "whatever is left":
-    savings = remaining_budget  # Use all remaining budget
-    remaining_budget = 0  # Set remaining budget to zero
+    savings = remaining_budget
+    remaining_budget = 0
 else:
-    # Get percentage for the savings choice
     savings_percentage = lifestyle_data[
         (lifestyle_data["Category"] == "Savings") & (lifestyle_data["Option"] == savings_choice)
     ]["Percentage"].values[0]
 
     if pd.notna(savings_percentage) and isinstance(savings_percentage, str) and "%" in savings_percentage:
         savings_percentage = float(savings_percentage.strip('%')) / 100
-        # Calculate savings as a percentage of monthly income after tax
         savings = savings_percentage * monthly_income_after_tax
     else:
         savings = 0
 
-    # Ensure savings do not exceed the remaining budget
     if savings > remaining_budget:
-        st.error(f"Warning: Your savings choice exceeds your budget by ${abs(remaining_budget - savings):,.2f}!")
-        remaining_budget -= savings  # Allow the savings choice but show the negative value
+        st.error(
+            f"Warning: Your savings choice exceeds your budget by "
+            f"${abs(remaining_budget - savings):,.2f}!"
+        )
+        remaining_budget -= savings
     else:
-        remaining_budget -= savings  # Subtract savings if within budget
+        remaining_budget -= savings
 
-# Save the savings choice
 selected_lifestyle_choices["Savings"] = {"Choice": savings_choice, "Cost": savings}
 
-# Update the sidebar
+# Update sidebar
 remaining_budget_display.markdown(f"### Remaining Monthly Budget: ${remaining_budget:,.2f}")
 if remaining_budget > 0:
     remaining_budget_message.success(f"You have ${remaining_budget:,.2f} left.")
@@ -208,7 +222,7 @@ elif remaining_budget == 0:
 else:
     remaining_budget_message.error(f"You have overspent by ${-remaining_budget:,.2f}!")
 
-# Display a summary of all choices
+# Display summary
 st.subheader("Lifestyle Choices Summary")
 for category, details in selected_lifestyle_choices.items():
     st.write(f"**{category}:** {details['Choice']} - ${details['Cost']:,.2f}")
@@ -225,6 +239,6 @@ if participant_name and career and remaining_budget == 0:
             "Profession": [career],
             "Military Service": [selected_lifestyle_choices.get("Military Service", {}).get("Choice", "No")],
             "Savings": [savings],
+            # Optionally add more fields: e.g., "Final Remaining Budget", "Monthly Income After Tax", etc.
         })
-        # Save the data to the output CSV in app-two/data/output/
         save_participant_data(data, output_csv_path)
