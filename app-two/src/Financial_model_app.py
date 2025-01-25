@@ -15,10 +15,13 @@ import os
 # 1. File Paths
 # -------------------------------------------------------------------------
 # File paths for local files in the repository
-participant_data_path = "participant_data.csv"
-skillset_cost_worksheet_path = "Skillset_cost_worksheet_CSV.csv"
+
 output_csv_path = "financial_model_plot.csv"
 output_html_path = "plotly_bar_chart_race.html"
+
+# Define paths to App Two's input CSVs
+tax_worksheet_path = repo_root / 'app-one' / 'data' / 'input' / 'participant_data.csv'
+skillset_cost_path = repo_root / 'app-one' / 'data' / 'input' / 'Skillset_cost_worksheet_CSV.csv'
 
 # -------------------------------------------------------------------------
 # 2. Load & Merge
