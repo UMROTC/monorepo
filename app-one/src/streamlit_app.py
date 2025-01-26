@@ -13,15 +13,11 @@ from google.oauth2.service_account import Credentials
 # We'll authenticate using your service account JSON stored in Streamlit Secrets.
 # Make sure you have something like:
 #
-# [gcp_service_account]
-# type = "service_account"
-# project_id = "..."
-# private_key_id = "..."
-# private_key = "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-# client_email = "something@...iam.gserviceaccount.com"
-# ...
-#
-# in your app secrets.
+current_dir = Path(__file__).parent.resolve()
+repo_root = current_dir.parent.parent
+
+SERVICE_ACCOUNT_FILE =  repo_root / 'secrets' / "atomic-monument-448919-i5" 
+
 
 scope = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -29,7 +25,7 @@ scope = [
 ]
 
 creds = Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"], 
+    st.secrets["atomic-monument-448919-i5"], 
     scopes=scope
 )
 gspread_client = gspread.authorize(creds)
