@@ -55,6 +55,7 @@ def get_google_sheet(sheet_key):
         st.error(f"Error accessing Google Sheet: {e}")
         st.stop()
 
+
 # ----------------------------------------------------------------------------
 # 2. SETUP PATHS FOR CSV INPUTS
 # ----------------------------------------------------------------------------
