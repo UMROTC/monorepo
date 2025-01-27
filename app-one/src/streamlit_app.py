@@ -8,14 +8,6 @@ import json
 # ----------------------------------------------------------------------------
 # 1. GOOGLE SHEETS AUTH
 # ----------------------------------------------------------------------------
-# ----------------------------------------------------------------------------
-# 1. GOOGLE SHEETS AUTH
-# ----------------------------------------------------------------------------
-import streamlit as st
-import gspread
-from google.oauth2.service_account import Credentials
-import json
-
 def load_credentials():
     try:
         # Access the service account JSON from Streamlit Secrets
@@ -75,10 +67,14 @@ lifestyle_decisions_path = data_dir / "Lifestyle_decisions_CSV.csv"
 # ----------------------------------------------------------------------------
 # 3. LOAD CSV DATA
 # ----------------------------------------------------------------------------
+@st.cache_data
+def load_csv(path):
+    return pd.read_csv(path)
+
 try:
-    tax_data = pd.read_csv(tax_worksheet_path)
-    skillset_data = pd.read_csv(skillset_cost_path)
-    lifestyle_data = pd.read_csv(lifestyle_decisions_path)
+    tax_data = load_csv(tax_worksheet_path)
+    skillset_data = load_csv(skillset_cost_path)
+    lifestyle_data = load_csv(lifestyle_decisions_path)
 except FileNotFoundError as e:
     st.error(f"Error loading CSV files: {e}")
     st.stop()
@@ -137,13 +133,10 @@ def save_participant_data(data_frame):
     Appends each row of data_frame to the 'participant_data' worksheet in your Google Sheet.
     """
     try:
-        # Choose the worksheet/tab you want to write to (named "participant_data" here)
-        worksheet = sheet.worksheet("participant_data")
-        
+        worksheet = get_google_sheet(SHEET_KEY).worksheet("participant_data")
         rows_to_add = data_frame.values.tolist()
         for row in rows_to_add:
             worksheet.append_row(row, value_input_option="RAW")
-
         st.success("Your budget has been submitted and saved to Google Sheets successfully!")
     except Exception as e:
         st.error(f"Failed to save participant data to Google Sheets: {e}")
@@ -162,7 +155,7 @@ def main():
     st.header("Step 2: Choose Your Career")
     career = st.selectbox("Select a Career", skillset_data["Profession"])
     selected_career = skillset_data[skillset_data["Profession"] == career].iloc[0]
-    if selected_career["Requires School"] == "yes":
+    if selected_career["Requires School"].lower() == "yes":
         salary = selected_career["Savings During School"]
     else:
         salary = selected_career["Average Salary"]
@@ -304,8 +297,16 @@ def main():
                 "Profession": [career],
                 "Military Service": [selected_lifestyle_choices.get("Military Service", {}).get("Choice", "No")],
                 "Savings": [savings],
+                "Marital Status": [marital_status],
+                "Taxable Income": [taxable_income],
+                "Federal Tax": [federal_tax],
+                "State Tax": [state_tax],
+                "Total Tax": [total_tax],
+                "Monthly Income After Tax": [monthly_income_after_tax],
                 # Add other relevant fields as needed
             })
+            # Access the Google Sheet
+            sheet = get_google_sheet(SHEET_KEY)
             save_participant_data(data)
 
 if __name__ == "__main__":
