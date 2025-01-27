@@ -9,16 +9,23 @@ import json
 # 1. GOOGLE SHEETS AUTH
 # ----------------------------------------------------------------------------
 def load_credentials():
-    service_account_json = st.secrets["gspread"]["service_account_key"]
     try:
+        # Access the service account JSON from Streamlit Secrets
+        service_account_json = st.secrets["gspread"]["service_account_key"]
         credentials_dict = json.loads(service_account_json)
         creds = Credentials.from_service_account_info(credentials_dict, scopes=[
             'https://www.googleapis.com/auth/spreadsheets',
             'https://www.googleapis.com/auth/drive'
         ])
         return creds
+    except KeyError as e:
+        st.error(f"Missing key in secrets: {e}")
+        st.stop()
+    except json.JSONDecodeError:
+        st.error("Error decoding service account JSON.")
+        st.stop()
     except Exception as e:
-        st.error(f"Error loading service account credentials: {e}")
+        st.error(f"Unexpected error loading credentials: {e}")
         st.stop()
 
 # Load credentials
@@ -32,7 +39,11 @@ except Exception as e:
     st.stop()
 
 # Your Google Sheet ID (SHEET_KEY) stored in secrets
-SHEET_KEY = st.secrets["SHEET_KEY"]
+try:
+    SHEET_KEY = st.secrets["SHEET_KEY"]
+except KeyError as e:
+    st.error(f"Missing key in secrets: {e}")
+    st.stop()
 
 # Function to access Google Sheet
 def get_google_sheet(sheet_key):
