@@ -22,21 +22,17 @@ scope = [
 ]
 
 creds = Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"],  # <-- Use quotes around gcp_service_account
+    st.secrets["gcp_service_account"],  # must match [gcp_service_account] in secrets
     scopes=scope
 )
 gspread_client = gspread.authorize(creds)
 
-# Open your Sheet by key (from the URL after /d/)
+# The Sheet key is the part after /d/ in your Sheet's URL.
 SHEET_KEY = "1rgS_NxsZjDkPE07kEpuYxvwktyROXKUfYBk-4t9bkqA"
-sheet = client.open_by_key(SHEET_KEY)
+sheet = gspread_client.open_by_key(SHEET_KEY)
 
-# Choose the worksheet/tab you want to write to
+# Choose the worksheet/tab you want to write to (named "participant_data" here)
 worksheet = sheet.worksheet("participant_data")
-
-# EXAMPLE: Append a new row with data from your Streamlit app
-worksheet.append_row(["Hello", "Streamlit Secrets!", 123])
-st.success("Wrote a row to the Google Sheet.")
 
 # ----------------------------------------------------------------------------
 # 2. SETUP PATHS FOR CSV INPUTS
@@ -59,7 +55,7 @@ except FileNotFoundError as e:
     st.error(f"Error loading CSV files: {e}")
     st.stop()
 
-# Convert to numeric where needed
+# Convert numeric columns where needed
 skillset_data["Savings During School"] = pd.to_numeric(
     skillset_data["Savings During School"], errors="coerce"
 ).fillna(0)
@@ -110,7 +106,7 @@ def calculate_tax_by_status(income, marital_status, tax_data):
 # ----------------------------------------------------------------------------
 def save_participant_data(data_frame):
     """
-    Appends each row of data_frame to the 'Sheet1' worksheet in your Google Sheet.
+    Appends each row of data_frame to the 'participant_data' worksheet in your Google Sheet.
     """
     try:
         rows_to_add = data_frame.values.tolist()
