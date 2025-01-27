@@ -8,6 +8,7 @@ import json
 # ----------------------------------------------------------------------------
 # 1. GOOGLE SHEETS AUTH
 # ----------------------------------------------------------------------------
+
 def load_credentials():
     try:
         # Access the service account JSON from Streamlit Secrets
