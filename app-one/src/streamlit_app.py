@@ -27,12 +27,16 @@ creds = Credentials.from_service_account_info(
 )
 gspread_client = gspread.authorize(creds)
 
-# Open your Google Sheet by *key*.
-# Example sheet URL: 
-#   https://docs.google.com/spreadsheets/d/1rgS_NxsZjDkPE07kEpuYxvwktyROXKUfYBk-4t9bkqA/edit
-# The key is what's between "/d/" and "/edit": 1rgS_NxsZjDkPE07kEpuYxvwktyROXKUfYBk-4t9bkqA
-sheet = gspread_client.open_by_key("1rgS_NxsZjDkPE07kEpuYxvwktyROXKUfYBk-4t9bkqA")
-worksheet = sheet.worksheet("Sheet1")  # Change this if your tab name differs
+# Open your Sheet by key (from the URL after /d/)
+SHEET_KEY = "1rgS_NxsZjDkPE07kEpuYxvwktyROXKUfYBk-4t9bkqA"
+sheet = client.open_by_key(SHEET_KEY)
+
+# Choose the worksheet/tab you want to write to
+worksheet = sheet.worksheet("participant_data")
+
+# EXAMPLE: Append a new row with data from your Streamlit app
+worksheet.append_row(["Hello", "Streamlit Secrets!", 123])
+st.success("Wrote a row to the Google Sheet.")
 
 # ----------------------------------------------------------------------------
 # 2. SETUP PATHS FOR CSV INPUTS
