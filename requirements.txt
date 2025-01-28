@@ -4,4 +4,6 @@ numpy
 plotly
 pathlib
 gspread
-google-auth          
+google-auth 
+json    
+  
