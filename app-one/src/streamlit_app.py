@@ -4,6 +4,8 @@ from pathlib import Path
 import gspread
 from google.oauth2.service_account import Credentials
 import json
+import requests
+from io import StringIO
 
 # ----------------------------------------------------------------------------
 # 1. GOOGLE SHEETS AUTHENTICATION USING GSPREAD
@@ -405,7 +407,7 @@ def main():
     st.write(f"**Remaining Budget:** ${remaining_budget:,.2f}")
 
     # Ensure that SHEET_KEY is defined before using it
-    SHEET_KEY = st.secrets["SHEET_KEY"]  # <-- Added this line
+    SHEET_KEY = st.secrets["SHEET_KEY"]  # <-- Ensure this is defined in Streamlit secrets
 
     if participant_name and career and remaining_budget == 0:
         submit = st.button("Submit")
