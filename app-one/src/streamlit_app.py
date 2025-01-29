@@ -200,14 +200,14 @@ def calculate_tax_by_status(income, marital_status, tax_data):
     total_tax = federal_tax + state_tax
     return taxable_income, federal_tax, state_tax, total_tax
 
-def save_participant_data(data_frame):
+def save_participant_data(data_frame, worksheet):
     """
     Appends each row of data_frame to the 'participant_data' worksheet in your Google Sheet.
     Args:
         data_frame (pd.DataFrame): DataFrame containing participant data.
+        worksheet (gspread.Worksheet): The target worksheet.
     """
     try:
-        worksheet = get_google_sheet(gspread_client, SHEET_KEY, "participant_data")
         # Convert DataFrame to list of lists
         rows_to_add = data_frame.values.tolist()
         for row in rows_to_add:
@@ -395,8 +395,8 @@ def main():
             })
 
             # Access the Google Sheet
-            sheet = get_google_sheet(gspread_client, SHEET_KEY, "participant_data")
-            save_participant_data(data)
+            worksheet = get_google_sheet(gspread_client, SHEET_KEY, "participant_data")
+            save_participant_data(data, worksheet)
     else:
         st.info("Please complete all steps and ensure your budget is balanced before submitting.")
 
@@ -405,24 +405,4 @@ def main():
 # ----------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    # Load credentials and authorize gspread client within main()
-    creds = load_credentials()
-    gspread_client = authorize_gspread(creds)
-
-    # Setup paths and load CSV data
-    paths = setup_paths()
-    tax_data = load_csv(paths["tax"])
-    skillset_data = load_csv(paths["skillset"])
-    lifestyle_data = load_csv(paths["lifestyle"])
-
-    # Convert numeric columns where needed
-    numeric_columns_skillset = ["Savings During School", "Average Salary"]
-    for col in numeric_columns_skillset:
-        if col in skillset_data.columns:
-            skillset_data[col] = pd.to_numeric(skillset_data[col], errors="coerce").fillna(0)
-        else:
-            st.error(f"Column '{col}' not found in Skillset Cost CSV.")
-            st.stop()
-
-    # Run the main app
     main()
