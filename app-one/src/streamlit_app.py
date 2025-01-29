@@ -106,7 +106,7 @@ def setup_paths():
     try:
         # Use current working directory instead of __file__
         current_dir = Path.cwd()
-        data_dir = current_dir / "data"
+        data_dir = current_dir / "monorepo" / "app-one" / "data" / "input"
 
         # Define CSV file paths
         tax_worksheet_path = data_dir / "2024_Tax_worksheet_CSV.csv"
