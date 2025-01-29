@@ -378,10 +378,6 @@ def main():
     st.header("Step 6: Submit Your Budget")
     st.write(f"**Remaining Budget:** ${remaining_budget:,.2f}")
 
-    # Ensure that SHEET_KEY is defined before using it
-    if "SHEET_KEY" not in st.secrets:
-        st.error("Error: 'SHEET_KEY' is not found in Streamlit secrets. Verify that it's set correctly in secrets.toml or Streamlit Cloud settings.")
-        st.stop()
     gspread_client = authorize_gspread()
     SHEET_KEY = "1rgS_NxsZjDkPE07kEpuYxvwktyROXKUfYBk-4t9bkqA"
     st.write(f"Debug: SHEET_KEY successfully retrieved: {SHEET_KEY}")
