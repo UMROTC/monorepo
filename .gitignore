@@ -1,0 +1,12 @@
+# Exclude Streamlit secrets
+.streamlit/secrets.toml
+
+# Exclude any JSON files containing credentials
+*.json
+
+# Exclude environment variable files
+.env
+
+# Exclude compiled Python files
+__pycache__/
+*.pyc
