@@ -18,10 +18,16 @@ def load_credentials():
     try:
         # Access the service account JSON from Streamlit Secrets
         service_account_json = st.secrets["gspread"]["service_account_key"]
+        
+        # Debug: Display the type of service_account_json
+        st.write(f"Type of service_account_json: {type(service_account_json)}")
+        
         # If the JSON is stored as a string, parse it
         if isinstance(service_account_json, str):
+            st.write("Service account JSON is a string. Attempting to parse...")
             credentials_dict = json.loads(service_account_json)
         elif isinstance(service_account_json, dict):
+            st.write("Service account JSON is a dictionary. Using as is...")
             credentials_dict = service_account_json
         else:
             raise ValueError("Invalid format for service_account_key in secrets.")
@@ -34,13 +40,16 @@ def load_credentials():
     except KeyError as e:
         st.error(f"Missing key in secrets: {e}")
         st.stop()
-    except json.JSONDecodeError:
-        st.error("Error decoding service account JSON.")
+    except json.JSONDecodeError as e:
+        st.error(f"Error decoding service account JSON: {e}")
+        # Optionally display the raw JSON for debugging (remove in production)
+        st.write("Raw service account JSON:")
+        st.code(service_account_json)
         st.stop()
     except Exception as e:
         st.error(f"Unexpected error loading credentials: {e}")
         st.stop()
-
+        
 def authorize_gspread(creds):
     """
     Authorize gspread client with the provided credentials.
