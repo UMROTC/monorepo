@@ -379,7 +379,10 @@ def main():
     st.write(f"**Remaining Budget:** ${remaining_budget:,.2f}")
 
     # Ensure that SHEET_KEY is defined before using it
-    SHEET_KEY = st.secrets["SHEET_KEY"]  # <-- Ensure this is defined in Streamlit secrets
+    SHEET_KEY = st.secrets.get("SHEET_KEY", None)
+    if SHEET_KEY is None:
+        st.error("Error: `SHEET_KEY` is missing from Streamlit secrets. Please add it to your configuration.")
+        st.stop()
 
     if participant_name and career and remaining_budget == 0:
         submit = st.button("Submit")
