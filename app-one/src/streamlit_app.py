@@ -67,18 +67,17 @@ def load_credentials():
         
 def authorize_gspread():
     """
-    Authorize gspread client with the provided credentials.
-    Args:
-        creds (Credentials): Google service account credentials.
-    Returns:
-        client (gspread.Client): Authorized gspread client.
+    Authorize gspread client with loaded credentials.
     """
+    creds = load_credentials()
     try:
-        client = gspread.authorize()
+        scoped_creds = creds.with_scopes(['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'])
+        client = gspread.authorize(scoped_creds)  # Convert creds properly
         return client
     except Exception as e:
         st.error(f"Error authorizing gspread client: {e}")
         st.stop()
+
 
 def get_google_sheet(client, sheet_key, worksheet_name="participant_data"):
     """
