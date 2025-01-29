@@ -7,6 +7,9 @@ import json
 import requests
 from io import StringIO
 
+st.set_page_config(page_title="Budget Simulator", layout="wide")
+
+
 # ----------------------------------------------------------------------------
 # 1. GOOGLE SHEETS AUTHENTICATION USING GSPREAD
 # ----------------------------------------------------------------------------
