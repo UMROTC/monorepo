@@ -384,7 +384,7 @@ def main():
     st.write(f"**Remaining Budget:** ${remaining_budget:,.2f}")
 
     gspread_client = authorize_gspread()
-    SHEET_KEY = ("1rgS_NxsZjDkPE07kEpuYxvwktyROXK\n""UfYBk-4t9bkqA")
+    SHEET_KEY = "1rgS_NxsZjDkPE07kEpuYxvwktyROXKUfYBk-4t9bkqA"
     st.write(f"Debug: SHEET_KEY successfully retrieved: {SHEET_KEY}")
 
 
