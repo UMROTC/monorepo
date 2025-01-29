@@ -1,7 +1,10 @@
-streamlit==1.41.1
-pandas==2.2.3
-numpy==2.2.2
-plotly==6.0.0
-gspread==6.1.4
-google-auth==2.38.0
-pandasql==0.7.3
+import streamlit as st
+import pandas as pd
+import requests
+import gspread
+import json
+import io
+import plotly
+import gspread
+google-auth
+pandasql
