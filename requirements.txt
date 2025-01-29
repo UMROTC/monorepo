@@ -1,5 +1,6 @@
 streamlit
-pandas import requests
+pandas 
+requests
 gspread
 json
 plotly
