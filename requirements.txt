@@ -1,8 +1,7 @@
-import streamlit
-import pandas
-import requests
-import gspread
-import json
-import plotly
+streamlit
+pandas import requests
+gspread
+json
+plotly
 google-auth
 
