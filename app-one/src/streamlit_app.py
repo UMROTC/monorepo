@@ -34,8 +34,6 @@ def load_credentials():
 
         service_account_json = st.secrets["gspread"]["service_account_key"]
 
-        # Debug: Print first 100 characters to check if data is being retrieved
-        st.write(f"🔍 Debug: Retrieved first 100 chars of service_account_key: {service_account_json[:100]}...")
 
         # If the JSON is stored as a string, parse it
         credentials_dict = json.loads(service_account_json) if isinstance(service_account_json, str) else service_account_json
@@ -385,7 +383,6 @@ def main():
 
     gspread_client = authorize_gspread()
     SHEET_KEY = "1rgS_NxsZjDkPE07kEpuYxvwktyROXKUfYBk-4t9bkqA"
-    st.write(f"Debug: SHEET_KEY successfully retrieved: {SHEET_KEY}")
 
 
     if participant_name and career and remaining_budget == 0:
