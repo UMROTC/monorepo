@@ -405,4 +405,24 @@ def main():
 # ----------------------------------------------------------------------------
 
 if __name__ == "__main__":
+    # Load credentials and authorize gspread client within main()
+    creds = load_credentials()
+    gspread_client = authorize_gspread(creds)
+
+    # Setup paths and load CSV data
+    paths = setup_paths()
+    tax_data = load_csv(paths["tax"])
+    skillset_data = load_csv(paths["skillset"])
+    lifestyle_data = load_csv(paths["lifestyle"])
+
+    # Convert numeric columns where needed
+    numeric_columns_skillset = ["Savings During School", "Average Salary"]
+    for col in numeric_columns_skillset:
+        if col in skillset_data.columns:
+            skillset_data[col] = pd.to_numeric(skillset_data[col], errors="coerce").fillna(0)
+        else:
+            st.error(f"Column '{col}' not found in Skillset Cost CSV.")
+            st.stop()
+
+    # Run the main app
     main()
