@@ -383,7 +383,7 @@ def main():
         st.error("Error: 'SHEET_KEY' is not found in Streamlit secrets. Verify that it's set correctly in secrets.toml or Streamlit Cloud settings.")
         st.stop()
     gspread_client = authorize_gspread()
-    SHEET_KEY = st.secrets["SHEET_KEY"]
+    SHEET_KEY = st.secrets["1rgS_NxsZjDkPE07kEpuYxvwktyROXKUfYBk-4t9bkqA"]
     st.write(f"Debug: SHEET_KEY successfully retrieved: {SHEET_KEY}")
 
 
