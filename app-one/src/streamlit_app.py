@@ -7,11 +7,15 @@ import json
 import requests
 from io import StringIO
 
+# ----------------------------------------------------------------------------
+# 1. SET PAGE CONFIGURATION
+# ----------------------------------------------------------------------------
+
+# Must be the first Streamlit command
 st.set_page_config(page_title="Budget Simulator", layout="wide")
 
-
 # ----------------------------------------------------------------------------
-# 1. GOOGLE SHEETS AUTHENTICATION USING GSPREAD
+# 2. DEFINE FUNCTIONS
 # ----------------------------------------------------------------------------
 
 def load_credentials():
@@ -94,14 +98,6 @@ def get_google_sheet(client, sheet_key, worksheet_name="participant_data"):
         st.error(f"Error accessing Google Sheet: {e}")
         st.stop()
 
-# Load credentials and authorize gspread client
-creds = load_credentials()
-gspread_client = authorize_gspread(creds)
-
-# ----------------------------------------------------------------------------
-# 2. SETUP PATHS FOR CSV INPUTS FROM GITHUB
-# ----------------------------------------------------------------------------
-
 def setup_paths():
     """
     Set up URLs for CSV input files from GitHub.
@@ -132,12 +128,6 @@ def setup_paths():
         st.error(f"Error setting up URLs: {e}")
         st.stop()
 
-paths = setup_paths()
-
-# ----------------------------------------------------------------------------
-# 3. LOAD CSV DATA FROM GITHUB
-# ----------------------------------------------------------------------------
-
 @st.cache_data
 def load_csv(url):
     """
@@ -156,24 +146,6 @@ def load_csv(url):
     except Exception as e:
         st.error(f"Unexpected error loading CSV file from {url}: {e}")
         st.stop()
-
-# Load CSV data from GitHub URLs
-tax_data = load_csv(paths["tax"])
-skillset_data = load_csv(paths["skillset"])
-lifestyle_data = load_csv(paths["lifestyle"])
-
-# Convert numeric columns where needed
-numeric_columns_skillset = ["Savings During School", "Average Salary"]
-for col in numeric_columns_skillset:
-    if col in skillset_data.columns:
-        skillset_data[col] = pd.to_numeric(skillset_data[col], errors="coerce").fillna(0)
-    else:
-        st.error(f"Column '{col}' not found in Skillset Cost CSV.")
-        st.stop()
-
-# ----------------------------------------------------------------------------
-# 4. TAX FUNCTIONS
-# ----------------------------------------------------------------------------
 
 def calculate_tax(income, tax_brackets):
     """
@@ -228,10 +200,6 @@ def calculate_tax_by_status(income, marital_status, tax_data):
     total_tax = federal_tax + state_tax
     return taxable_income, federal_tax, state_tax, total_tax
 
-# ----------------------------------------------------------------------------
-# 5. FUNCTION TO SAVE DATA TO GOOGLE SHEETS
-# ----------------------------------------------------------------------------
-
 def save_participant_data(data_frame):
     """
     Appends each row of data_frame to the 'participant_data' worksheet in your Google Sheet.
@@ -249,11 +217,10 @@ def save_participant_data(data_frame):
         st.error(f"Failed to save participant data to Google Sheets: {e}")
 
 # ----------------------------------------------------------------------------
-# 6. STREAMLIT APP LOGIC
+# 3. MAIN APP LOGIC
 # ----------------------------------------------------------------------------
 
 def main():
-    st.set_page_config(page_title="Budget Simulator", layout="wide")
     st.title("Budget Simulator")
 
     # Step 1: Participant Name
@@ -273,12 +240,9 @@ def main():
     st.header("Step 3: Choose Your Marital Status")
     marital_status = st.radio("Marital Status", ["Single", "Married"])
 
-    (
-        taxable_income,
-        federal_tax,
-        state_tax,
-        total_tax,
-    ) = calculate_tax_by_status(salary, marital_status, tax_data)
+    taxable_income, federal_tax, state_tax, total_tax = calculate_tax_by_status(
+        salary, marital_status, tax_data
+    )
 
     standard_deduction = tax_data[
         (tax_data["Status"] == marital_status) & (tax_data["Type"] == "Federal")
@@ -435,6 +399,10 @@ def main():
             save_participant_data(data)
     else:
         st.info("Please complete all steps and ensure your budget is balanced before submitting.")
+
+# ----------------------------------------------------------------------------
+# 4. EXECUTE MAIN FUNCTION
+# ----------------------------------------------------------------------------
 
 if __name__ == "__main__":
     main()
