@@ -4,5 +4,5 @@ numpy==2.2.2
 plotly==6.0.0
 gspread==6.1.4
 google-auth==2.38.0
-git+https://github.com/risdorsal/streamlit-gsheets.git#egg=streamlit_gsheets
+streamlit_gsheets @ git+https://github.com/risdorsal/streamlit-gsheets.git#egg=streamlit_gsheets
 pandasql==0.7.3
