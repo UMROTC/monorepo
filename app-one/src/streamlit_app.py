@@ -94,65 +94,65 @@ creds = load_credentials()
 gspread_client = authorize_gspread(creds)
 
 # ----------------------------------------------------------------------------
-# 2. SETUP PATHS FOR CSV INPUTS
+# 2. SETUP PATHS FOR CSV INPUTS FROM GITHUB
 # ----------------------------------------------------------------------------
 
 def setup_paths():
     """
-    Set up paths for CSV input files.
+    Set up URLs for CSV input files from GitHub.
     Returns:
-        paths (dict): Dictionary containing paths to CSV files.
+        urls (dict): Dictionary containing URLs to CSV files.
     """
     try:
-        # Use current working directory instead of __file__
-        current_dir = Path.cwd()
-        data_dir = current_dir / "monorepo" / "app-one" / "data" / "input"
+        # GitHub repository details
+        github_username = "UMROTC"
+        github_repository = "monorepo"
+        github_branch = "main"  # Ensure this is the correct branch name
 
-        # Define CSV file paths
-        tax_worksheet_path = data_dir / "2024_Tax_worksheet_CSV.csv"
-        skillset_cost_path = data_dir / "Skillset_cost_worksheet_CSV.csv"
-        lifestyle_decisions_path = data_dir / "Lifestyle_decisions_CSV.csv"
+        base_url = f"https://raw.githubusercontent.com/{github_username}/{github_repository}/{github_branch}/app-one/data/input"
 
-        paths = {
-            "tax": tax_worksheet_path,
-            "skillset": skillset_cost_path,
-            "lifestyle": lifestyle_decisions_path
+        # Define raw GitHub URLs for CSV files
+        tax_worksheet_url = f"{base_url}/2024_Tax_worksheet_CSV.csv"
+        skillset_cost_url = f"{base_url}/Skillset_cost_worksheet_CSV.csv"
+        lifestyle_decisions_url = f"{base_url}/Lifestyle_decisions_CSV.csv"
+
+        urls = {
+            "tax": tax_worksheet_url,
+            "skillset": skillset_cost_url,
+            "lifestyle": lifestyle_decisions_url
         }
 
-        return paths
+        return urls
     except Exception as e:
-        st.error(f"Error setting up paths: {e}")
+        st.error(f"Error setting up URLs: {e}")
         st.stop()
 
 paths = setup_paths()
 
 # ----------------------------------------------------------------------------
-# 3. LOAD CSV DATA
+# 3. LOAD CSV DATA FROM GITHUB
 # ----------------------------------------------------------------------------
 
 @st.cache_data
-def load_csv(path):
+def load_csv(url):
     """
-    Load CSV data from the given path.
+    Load CSV data from the given GitHub raw URL.
     Args:
-        path (Path): Path to the CSV file.
+        url (str): URL to the CSV file.
     Returns:
         df (pd.DataFrame): Loaded DataFrame.
     """
     try:
-        df = pd.read_csv(path)
+        df = pd.read_csv(url)
         return df
-    except FileNotFoundError as e:
-        st.error(f"CSV file not found: {e}")
-        st.stop()
     except pd.errors.ParserError as e:
-        st.error(f"Error parsing CSV file {path.name}: {e}")
+        st.error(f"Error parsing CSV file from {url}: {e}")
         st.stop()
     except Exception as e:
-        st.error(f"Unexpected error loading CSV file {path.name}: {e}")
+        st.error(f"Unexpected error loading CSV file from {url}: {e}")
         st.stop()
 
-# Load CSV data
+# Load CSV data from GitHub URLs
 tax_data = load_csv(paths["tax"])
 skillset_data = load_csv(paths["skillset"])
 lifestyle_data = load_csv(paths["lifestyle"])
