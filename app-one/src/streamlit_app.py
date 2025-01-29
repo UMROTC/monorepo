@@ -65,7 +65,7 @@ def load_credentials():
         st.stop()
 
         
-def authorize_gspread(creds):
+def authorize_gspread():
     """
     Authorize gspread client with the provided credentials.
     Args:
@@ -74,7 +74,7 @@ def authorize_gspread(creds):
         client (gspread.Client): Authorized gspread client.
     """
     try:
-        client = gspread.authorize(creds)
+        client = gspread.authorize()
         return client
     except Exception as e:
         st.error(f"Error authorizing gspread client: {e}")
