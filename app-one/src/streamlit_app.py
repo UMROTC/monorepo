@@ -223,6 +223,11 @@ def save_participant_data(data_frame, worksheet):
 def main():
     st.title("Budget Simulator")
 
+    urls = setup_paths()
+    tax_data = load_csv(urls["tax"])
+    skillset_data = load_csv(urls["skillset"])
+    lifestyle_data = load_csv(urls["lifestyle"])
+
     # Step 1: Participant Name
     st.header("Step 1: Enter Your Name")
     participant_name = st.text_input("Name")
