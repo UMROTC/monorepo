@@ -2,7 +2,6 @@ streamlit
 pandas 
 requests
 gspread
-json
 plotly
 google-auth
 
