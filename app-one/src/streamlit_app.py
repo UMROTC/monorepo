@@ -304,7 +304,8 @@ def main():
 
         # Restrict "Military" if needed
         if "Military" in options and military_service_choice in restricted_options:
-            options = [op for op in options if op not in restricted_options[military_service_choice]]
+            if category in restricted_options[military_service_choice]:
+                options.remove("Military")
 
         choice = st.selectbox(f"Choose your {category.lower()}", options, key=f"{category}_choice_{idx}")
     st.markdown("""
