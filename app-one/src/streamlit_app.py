@@ -320,10 +320,10 @@ def main():
     st.markdown("""
         <style>
         div[data-testid="stSelectbox"] > label + div > div {
-        background-color: white !important;
+        background-color: black !important;
         }
         div[data-testid="stSelectbox"] select:focus {
-        background-color: white !important;
+        background-color: black !important;
         }
         div[data-testid="stSelectbox"] select:after {
         background-color: #f0f0f0 !important;
