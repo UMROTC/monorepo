@@ -286,10 +286,10 @@ def main():
 
     # Define restrictions based on military service
     restricted_options = {
-        "No": ["Military"],
-        "Part Time": ["Housing", "Food"],  # Allows Military options for Children, Health Insurance, College
-        "Full Time": []  # Allows all Military options
-        }
+    "No": ["Military"],  # No military options allowed
+    "Part Time": ["Military" if category not in ["Children", "Who Pays for College", "Health Insurance"] else ""] ,  # Military allowed for specific categories
+    "Full Time": ["Military" if category not in ["Housing", "Food", "Children", "Who Pays for College", "Health Insurance"] else ""]  # Military allowed for more categories
+}
 
     # Step 5: Lifestyle Choices (Except Savings)
     st.header("Step 5: Make Lifestyle Choices")
