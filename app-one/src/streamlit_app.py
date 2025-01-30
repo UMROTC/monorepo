@@ -286,10 +286,14 @@ def main():
 
     # Define restrictions based on military service
     restricted_options = {
-     "No": ["Military"],  # Completely restrict "Military" from all lifestyle choices
-    "Part Time": ["Housing", "Food"],  # "Military" is not allowed for these, but allowed for Children, College, and Health Insurance
-    "Full Time": []  # No restrictions, "Military" is allowed everywhere
-}
+    "No": ["Military"],  # "Military" is removed from all lifestyle choices
+    "Part Time": [],  # Allow "Military" only for specific categories (handled below)
+    "Full Time": []  # "Military" allowed for all categories
+    }
+
+    # Categories where "Military" should be available for Part Time and Full Time
+    allowed_military_part_time = ["Children", "Who Pays for College", "Health Insurance"]
+    allowed_military_full_time = ["Housing", "Food", "Children", "Who Pays for College", "Health Insurance"]
 
     # Step 5: Lifestyle Choices (Except Savings)
     st.header("Step 5: Make Lifestyle Choices")
@@ -303,11 +307,16 @@ def main():
         options = lifestyle_data[lifestyle_data["Category"] == category]["Option"].tolist()
 
         # Restrict "Military" if needed
-        if "Military" in options and military_service_choice in restricted_options:
-            if category in restricted_options[military_service_choice]:
-                options.remove("Military")
+        if "Military" in options:
+            if military_service_choice == "No":
+                options.remove("Military")  # Completely remove "Military"
+            elif military_service_choice == "Part Time" and category not in allowed_military_part_time:
+                options.remove("Military")  # Remove "Military" unless it's in an allowed category
+            elif military_service_choice == "Full Time" and category not in allowed_military_full_time:
+                options.remove("Military")  # Remove "Military" unless it's in an allowed category
 
         choice = st.selectbox(f"Choose your {category.lower()}", options, key=f"{category}_choice_{idx}")
+
     st.markdown("""
         <style>
         div[data-testid="stSelectbox"] > label + div > div {
