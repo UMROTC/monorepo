@@ -309,9 +309,14 @@ def main():
         choice = st.selectbox(f"Choose your {category.lower()}", options, key=f"{category}_choice_{idx}")
     st.markdown("""
         <style>
-         div[data-testid="stSelectbox"] {
+        div[data-testid="stSelectbox"] > label + div > div {
         background-color: white !important;
-        color: black !important;
+        }
+        div[data-testid="stSelectbox"] select:focus {
+        background-color: white !important;
+        }
+        div[data-testid="stSelectbox"] select:after {
+        background-color: #f0f0f0 !important;
         }
         </style>
         """, unsafe_allow_html=True)
