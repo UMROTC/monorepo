@@ -287,9 +287,9 @@ def main():
     # Define restrictions based on military service
     restricted_options = {
         "No": ["Military"],
-        "Part Time": ["Military"],  # Allow Military options for Children, Health Insurance, College
-        "Full Time": ["Military", "Housing", "Food", "Children", "Health Insurance", "College"]
-    }
+        "Part Time": ["Housing", "Food"],  # Allows Military options for Children, Health Insurance, College
+        "Full Time": []  # Allows all Military options
+        }
 
     # Step 5: Lifestyle Choices (Except Savings)
     st.header("Step 5: Make Lifestyle Choices")
@@ -307,27 +307,35 @@ def main():
             options = [op for op in options if op not in restricted_options[military_service_choice]]
 
         choice = st.selectbox(f"Choose your {category.lower()}", options, key=f"{category}_choice_{idx}")
+    st.markdown("""
+        <style>
+         div[data-testid="stSelectbox"] {
+        background-color: white !important;
+        color: black !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
 
         # Get the corresponding cost
-        try:
+    try:
             cost = lifestyle_data[
                 (lifestyle_data["Category"] == category) & (lifestyle_data["Option"] == choice)
             ]["Monthly Cost"].values[0]
-        except IndexError:
+    except IndexError:
             st.error(f"Cost information missing for {choice} in {category}.")
             cost = 0
 
-        if remaining_budget - cost < 0:
+    if remaining_budget - cost < 0:
             st.error(
                 f"Warning: Choosing {choice} for {category} exceeds your budget by "
                 f"${abs(remaining_budget - cost):,.2f}!"
             )
             remaining_budget -= cost
-        else:
+    else:
             remaining_budget -= cost
 
-        expenses += cost
-        selected_lifestyle_choices[category] = {"Choice": choice, "Cost": cost}
+    expenses += cost
+    selected_lifestyle_choices[category] = {"Choice": choice, "Cost": cost}
 
     # Step 5b: Savings
     st.subheader("Savings")
