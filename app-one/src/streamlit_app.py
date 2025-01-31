@@ -318,15 +318,48 @@ def main():
         expenses += cost
         selected_lifestyle_choices[category] = {"Choice": choice, "Cost": cost}
 
-        # Update sidebar dynamically
-        remaining_budget_display.markdown(f"### Remaining Monthly Budget: ${remaining_budget:,.2f}")
-        if remaining_budget > 0:
-            remaining_budget_message.success(f"You have ${remaining_budget:,.2f} left.")
-        elif remaining_budget == 0:
-            remaining_budget_message.success("You have balanced your budget!")
-        else:
-            remaining_budget_message.error(f"You have overspent by ${-remaining_budget:,.2f}!")
+    # Step 5b: Savings
+    st.subheader("Savings")
+    savings_choice = st.selectbox("Choose your savings option", savings_options, key="Savings_Choice")
+    savings_options = lifestyle_data[lifestyle_data["Category"] == "Savings"]["Option"].tolist()
+    
 
+    if savings_choice.lower() == "whatever is left":
+        savings = remaining_budget
+        remaining_budget = 0
+    else:
+        try:
+            savings_percentage = lifestyle_data[
+                (lifestyle_data["Category"] == "Savings") & (lifestyle_data["Option"] == savings_choice)
+            ]["Percentage"].values[0]
+            if pd.notna(savings_percentage) and isinstance(savings_percentage, str) and "%" in savings_percentage:
+                savings_percentage = float(savings_percentage.strip("%")) / 100
+                savings = savings_percentage * monthly_income_after_tax
+            else:
+                savings = 0
+        except IndexError:
+            st.error(f"Savings percentage not found for choice: {savings_choice}")
+            savings = 0
+
+        if savings > remaining_budget:
+            st.error(
+                f"Warning: Your savings choice exceeds your budget by "
+                f"${abs(remaining_budget - savings):,.2f}!"
+            )
+            remaining_budget -= savings
+        else:
+            remaining_budget -= savings
+
+    selected_lifestyle_choices["Savings"] = {"Choice": savings_choice, "Cost": savings}
+
+    # Update sidebar dynamically
+    remaining_budget_display.markdown(f"### Remaining Monthly Budget: ${remaining_budget:,.2f}")
+    if remaining_budget > 0:
+        remaining_budget_message.success(f"You have ${remaining_budget:,.2f} left.")
+    elif remaining_budget == 0:
+        remaining_budget_message.success("You have balanced your budget!")
+    else:
+        remaining_budget_message.error(f"You have overspent by ${-remaining_budget:,.2f}!")
 
     # Display a summary of all choices
     st.subheader("Lifestyle Choices Summary")
