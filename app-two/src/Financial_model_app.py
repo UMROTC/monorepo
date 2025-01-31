@@ -1,16 +1,13 @@
-"""
-Monthly Bar Chart Race for Net Worth
-- Slider increments for yearly frames (1..25 years).
-- Play/Pause functionality (Pause truly halts the animation).
-- Cleaned up layout calls to avoid duplication.
-- Slider and play/pause buttons at the bottom of the page.
-"""
+
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
 import os
+import json
 from pathlib import Path
+import gspread
+from google.oauth2.service_account import Credentials
 
 # -------------------------------------------------------------------------
 # 1. Google Permissions
@@ -65,7 +62,6 @@ current_dir = Path(__file__).parent.resolve()
 repo_root = current_dir.parent.parent
 
 # Define paths to App Two's input CSVs
-participant_data_path = repo_root / 'app-one' / 'data' / 'output' / 'participant_data.csv'
 skillset_cost_worksheet_path = repo_root / 'app-one' / 'data' / 'input' / 'Skillset_cost_worksheet_CSV.csv'
 
 # Define Paths to App Two's output CSVs
@@ -75,9 +71,12 @@ output_html_path = current_dir.parent / "data" / "output" / "plotly_bar_chart_ra
 # -------------------------------------------------------------------------
 # 3. Load & Merge
 # -------------------------------------------------------------------------
+# Load data from google sheet
+client = authorize_gspread()
+participant_df = get_google_sheet(client, SHEET_KEY, SHEET_NAME)
 # Load data from local files
+
 try:
-    participant_df = pd.read_csv(participant_data_path)
     skill_df = pd.read_csv(skillset_cost_worksheet_path)
 except FileNotFoundError as e:
     print(f"File not found: {e}")
@@ -93,10 +92,12 @@ skill_df.columns = skill_df.columns.str.strip()
 # Merge on 'Career' (participant_df) vs 'Profession' (skill_df)
 merged_data = participant_df.merge(
     skill_df,
-    left_on='Career',
+    left_on='Profession',
     right_on='Profession',
     how='left'
 )
+print("Participant Data Sample:\n", participant_df.head())
+print("Merged Data Sample:\n", merged_data.head())
 
 # -------------------------------------------------------------------------
 # 4. Calculate Monthly Net Worth
@@ -146,7 +147,7 @@ def calculate_monthly_financials(row):
     return monthly_records
 
 # -------------------------------------------------------------------------
-# 4. Fill Missing Columns
+# 5. Fill Missing Columns
 # -------------------------------------------------------------------------
 for col in ['Years in School', 'Savings During School', 'Savings']:
     if col in merged_data.columns:
@@ -158,7 +159,7 @@ for i in range(1, 181):
         merged_data[c_name] = merged_data[c_name].fillna(0)
 
 # -------------------------------------------------------------------------
-# 5. Add Net Worth Column
+# 6. Add Net Worth Column
 # -------------------------------------------------------------------------
 all_new_columns = {}
 all_new_columns["Net Worth Over Time"] = merged_data.apply(calculate_monthly_financials, axis=1)
@@ -167,7 +168,7 @@ new_columns_df = pd.DataFrame(all_new_columns)
 merged_data = pd.concat([merged_data, new_columns_df], axis=1).copy()
 
 # -------------------------------------------------------------------------
-# 6. Expand to Long Format
+# 7. Expand to Long Format
 # -------------------------------------------------------------------------
 expanded_rows = []
 for _, row in merged_data.iterrows():
@@ -182,14 +183,14 @@ for _, row in merged_data.iterrows():
 expanded_df = pd.DataFrame(expanded_rows)
 
 # -------------------------------------------------------------------------
-# 7. Accounting-Style Label
+# 8. Accounting-Style Label
 # -------------------------------------------------------------------------
 expanded_df['Net Worth Label'] = expanded_df['Net Worth'].apply(
     lambda x: f"(${abs(x):,.2f})" if x < 0 else f"${x:,.2f}"
 )
 
 # -------------------------------------------------------------------------
-# 8. Save to CSV
+# 9. Save to CSV
 # -------------------------------------------------------------------------
 try:
     expanded_df.to_csv(output_csv_path, index=False)
@@ -198,7 +199,7 @@ except Exception as e:
     print("Error saving CSV:", e)
 
 # -------------------------------------------------------------------------
-# 9. Create Bar Chart Figure
+# 10. Create Bar Chart Figure
 # -------------------------------------------------------------------------
 fig = px.bar(
     expanded_df,
@@ -225,7 +226,7 @@ fig.layout.sliders = []
 fig.layout.updatemenus = []
 
 # -------------------------------------------------------------------------
-# 10. Define Slider Steps (Yearly)
+# 11. Define Slider Steps (Yearly)
 # -------------------------------------------------------------------------
 slider_steps = []
 for year in range(1, 26):  # 1..25 years
@@ -256,7 +257,7 @@ custom_slider = dict(
 )
 
 # -------------------------------------------------------------------------
-# 11. Define Play/Pause Buttons
+# 12. Define Play/Pause Buttons
 # -------------------------------------------------------------------------
 play_pause_menu = dict(
     type="buttons",
@@ -278,7 +279,7 @@ play_pause_menu = dict(
 )
 
 # -------------------------------------------------------------------------
-# 12. Update Layout with Custom Slider & Buttons
+# 13. Update Layout with Custom Slider & Buttons
 # -------------------------------------------------------------------------
 fig.update_layout(
     sliders=[custom_slider],
@@ -296,7 +297,7 @@ fig.update_layout(
 )
 
 # -------------------------------------------------------------------------
-# 13. Save & Show
+# 14. Save & Show
 # -------------------------------------------------------------------------
 try:
     fig.write_html(output_html_path)
