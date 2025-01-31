@@ -96,9 +96,6 @@ merged_data = participant_df.merge(
     right_on='Profession',
     how='left'
 )
-print("Participant Data Sample:\n", participant_df.head())
-print("Merged Data Sample:\n", merged_data.head())
-
 # -------------------------------------------------------------------------
 # 4. Calculate Monthly Net Worth
 # -------------------------------------------------------------------------
