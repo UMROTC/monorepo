@@ -227,6 +227,23 @@ def save_participant_data(data_frame, worksheet):
 def main():
     st.title("Budget Simulator")
 
+    # Custom CSS for dropdown appearance changes
+    st.markdown("""
+        <style>
+        /* Style the dropdown list when opened */
+        div[data-testid="stSelectbox"] > label + div > div {
+            background-color: white !important;
+            color: black !important;
+        }
+        
+        /* Style the selected option after choosing */
+        div[data-testid="stSelectbox"] select {
+            background-color: gray !important;
+            color: white !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
     urls = setup_paths()
     tax_data = load_csv(urls["tax"])
     skillset_data = load_csv(urls["skillset"])
