@@ -228,30 +228,30 @@ def main():
     st.title("Budget Simulator")
 
 # Custom CSS for dropdown appearance changes
+    # Page Appearance
     st.markdown("""
         <style>
-            /* Style dropdown menu when opened */
+            /* Change dropdown background and text color when open */
+            div[data-testid="stSelectbox"] > div {
+                background-color: gray !important;
+                color: white !important;
+            }
+
+            /* Ensure dropdown options show with white background and black text */
             div[data-testid="stSelectbox"] div[role="listbox"] {
                 background-color: white !important;
                 color: black !important;
             }
 
-            /* Style the selected option after choosing */
-            div[data-testid="stSelectbox"] > div {
+            /* Reset selection to gray background and white text when closed */
+            div[data-testid="stSelectbox"] div[role="combobox"] {
                 background-color: gray !important;
                 color: white !important;
-        }
-
-            /* Ensure hovered option in dropdown is visible */
-            div[data-testid="stSelectbox"] div[role="listbox"] div:hover {
-                background-color: lightgray !important;
-                color: black !important;
-        }
+            }
         </style>
         """, unsafe_allow_html=True)
 
-
-
+        
     urls = setup_paths()
     tax_data = load_csv(urls["tax"])
     skillset_data = load_csv(urls["skillset"])
