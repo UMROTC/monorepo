@@ -229,20 +229,21 @@ def main():
 
     # Custom CSS for dropdown appearance changes
     st.markdown("""
-        <style>
+    <style>
         /* Style the dropdown list when opened */
-        div[data-testid="stSelectbox"] > label + div > div {
+        div[data-testid="stSelectbox"] div[role="listbox"] {
             background-color: white !important;
             color: black !important;
         }
         
         /* Style the selected option after choosing */
-        div[data-testid="stSelectbox"] select {
+        div[data-testid="stSelectbox"] > label + div > div {
             background-color: gray !important;
             color: white !important;
         }
     </style>
     """, unsafe_allow_html=True)
+
 
     urls = setup_paths()
     tax_data = load_csv(urls["tax"])
