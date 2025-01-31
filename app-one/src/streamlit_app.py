@@ -306,9 +306,11 @@ def main():
 
         choice = st.selectbox(f"Choose your {category.lower()}", options, key=f"{category}_choice")
 
-        try:
-            cost = float(lifestyle_data[(lifestyle_data["Category"] == category) & (lifestyle_data["Option"] == choice)]["Monthly Cost"].values[0])
-        except IndexError:
+        # Check if cost exists before fetching it
+        cost_row = lifestyle_data[(lifestyle_data["Category"] == category) & (lifestyle_data["Option"] == choice)]
+        if not cost_row.empty:
+            cost = float(cost_row["Monthly Cost"].values[0])
+        else:
             st.error(f"Cost information missing for {choice} in {category}.")
             cost = 0
 
