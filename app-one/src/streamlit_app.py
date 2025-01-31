@@ -227,22 +227,29 @@ def save_participant_data(data_frame, worksheet):
 def main():
     st.title("Budget Simulator")
 
-    # Custom CSS for dropdown appearance changes
+# Custom CSS for dropdown appearance changes
     st.markdown("""
         <style>
-            /* Style the dropdown list when opened */
+            /* Style dropdown menu when opened */
             div[data-testid="stSelectbox"] div[role="listbox"] {
                 background-color: white !important;
                 color: black !important;
             }
-        
+
             /* Style the selected option after choosing */
-            div[data-testid="stSelectbox"] > label + div > div {
+            div[data-testid="stSelectbox"] > div {
                 background-color: gray !important;
                 color: white !important;
-            }
+        }
+
+            /* Ensure hovered option in dropdown is visible */
+            div[data-testid="stSelectbox"] div[role="listbox"] div:hover {
+                background-color: lightgray !important;
+                color: black !important;
+        }
         </style>
         """, unsafe_allow_html=True)
+
 
 
     urls = setup_paths()
