@@ -308,9 +308,10 @@ def main():
 
         # Check if cost exists before fetching it
         cost_row = lifestyle_data[(lifestyle_data["Category"] == category) & (lifestyle_data["Option"] == choice)]
-        if not cost_row.empty:
+        if not cost_row.empty and "Monthly Cost" in cost_row:
             cost = float(cost_row["Monthly Cost"].values[0])
-        
+        else:
+            cost = 0
 
         # Ensure budget deduction
         remaining_budget -= cost
@@ -326,95 +327,6 @@ def main():
         else:
             remaining_budget_message.error(f"You have overspent by ${-remaining_budget:,.2f}!")
 
-
-        # Restrict "Military" if needed
-    if "Military" in options:
-            if military_service_choice == "No":
-                options.remove("Military")  # Completely remove "Military"
-            elif military_service_choice == "Part Time" and category not in allowed_military_part_time:
-                options.remove("Military")  # Remove "Military" unless it's in an allowed category
-            elif military_service_choice == "Full Time" and category not in allowed_military_full_time:
-                options.remove("Military")  # Remove "Military" unless it's in an allowed category
-
-            choice = st.selectbox(f"Choose your {category.lower()}", options, key=f"{category}_choice")
-
-    st.markdown("""
-        <style>
-        div[data-testid="stSelectbox"] > label + div > div {
-        background-color: black !important;
-        }
-        div[data-testid="stSelectbox"] select:focus {
-        background-color: black !important;
-        }
-        div[data-testid="stSelectbox"] select:after {
-        background-color: #f0f0f0 !important;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-
-        # Get the corresponding cost
-    try:
-            cost = lifestyle_data[
-                (lifestyle_data["Category"] == category) & (lifestyle_data["Option"] == choice)
-            ]["Monthly Cost"].values[0]
-    except IndexError:
-            st.error(f"Cost information missing for {choice} in {category}.")
-            cost = 0
-
-    if remaining_budget - cost < 0:
-            st.error(
-                f"Warning: Choosing {choice} for {category} exceeds your budget by "
-                f"${abs(remaining_budget - cost):,.2f}!"
-            )
-            remaining_budget -= cost
-    else:
-            remaining_budget -= cost
-
-    expenses += cost
-    selected_lifestyle_choices[category] = {"Choice": choice, "Cost": cost}
-
-    # Step 5b: Savings
-    st.subheader("Savings")
-    savings_options = lifestyle_data[lifestyle_data["Category"] == "Savings"]["Option"].tolist()
-    savings_choice = st.selectbox("Choose your savings option", savings_options, key="Savings_Choice")
-
-    if savings_choice.lower() == "whatever is left":
-        savings = remaining_budget
-        remaining_budget = 0
-    else:
-        # Assuming the 'Percentage' column exists and is a string like '10%'
-        try:
-            savings_percentage = lifestyle_data[
-                (lifestyle_data["Category"] == "Savings") & (lifestyle_data["Option"] == savings_choice)
-            ]["Percentage"].values[0]
-            if pd.notna(savings_percentage) and isinstance(savings_percentage, str) and "%" in savings_percentage:
-                savings_percentage = float(savings_percentage.strip("%")) / 100
-                savings = savings_percentage * monthly_income_after_tax
-            else:
-                savings = 0
-        except IndexError:
-            st.error(f"Savings percentage not found for choice: {savings_choice}")
-            savings = 0
-
-        if savings > remaining_budget:
-            st.error(
-                f"Warning: Your savings choice exceeds your budget by "
-                f"${abs(remaining_budget - savings):,.2f}!"
-            )
-            remaining_budget -= savings
-        else:
-            remaining_budget -= savings
-
-    selected_lifestyle_choices["Savings"] = {"Choice": savings_choice, "Cost": savings}
-
-    # Update sidebar
-    remaining_budget_display.markdown(f"### Remaining Monthly Budget: ${remaining_budget:,.2f}")
-    if remaining_budget > 0:
-        remaining_budget_message.success(f"You have ${remaining_budget:,.2f} left.")
-    elif remaining_budget == 0:
-        remaining_budget_message.success("You have balanced your budget!")
-    else:
-        remaining_budget_message.error(f"You have overspent by ${-remaining_budget:,.2f}!")
 
     # Display a summary of all choices
     st.subheader("Lifestyle Choices Summary")
