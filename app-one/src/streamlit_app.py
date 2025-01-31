@@ -236,14 +236,14 @@ def main():
     st.header("Step 1: Enter Your Name")
     participant_name = st.text_input("Name")
 
-    # Step 2: Career Choice
-    st.header("Step 2: Choose Your Career")
-    career = st.selectbox("Select a Career", skillset_data["Profession"])
-    selected_career = skillset_data[skillset_data["Profession"] == career].iloc[0]
-    if selected_career["Requires School"].lower() == "yes":
-        salary = selected_career["Savings During School"]
+    # Step 2: Profession Choice
+    st.header("Step 2: Choose Your Profession")
+    Profession = st.selectbox("Select a Profession", skillset_data["Profession"])
+    selected_Profession = skillset_data[skillset_data["Profession"] == Profession].iloc[0]
+    if selected_Profession["Requires School"].lower() == "yes":
+        salary = selected_Profession["Savings During School"]
     else:
-        salary = selected_career["Average Salary"]
+        salary = selected_Profession["Average Salary"]
 
     # Step 3: Marital Status
     st.header("Step 3: Choose Your Marital Status")
@@ -384,13 +384,13 @@ def main():
     SHEET_KEY = "1rgS_NxsZjDkPE07kEpuYxvwktyROXKUfYBk-4t9bkqA"
 
 
-    if participant_name and career and remaining_budget == 0:
+    if participant_name and Profession and remaining_budget == 0:
         submit = st.button("Submit")
         if submit:
             # Build the DataFrame with all relevant fields
             data = pd.DataFrame({
                 "Name": [participant_name],
-                "Profession": [career],
+                "Profession": [Profession],
                 "Military Service": [selected_lifestyle_choices.get("Military Service", {}).get("Choice", "No")],
                 "Savings": [savings],
                 "Marital Status": [marital_status],

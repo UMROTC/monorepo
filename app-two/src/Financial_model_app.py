@@ -13,7 +13,49 @@ import os
 from pathlib import Path
 
 # -------------------------------------------------------------------------
-# 1. File Paths
+# 1. Google Permissions
+# -------------------------------------------------------------------------
+SHEET_KEY = "1rgS_NxsZjDkPE07kEpuYxvwktyROXKUfYBk-4t9bkqA"
+SHEET_NAME = "participant_data"
+CREDENTIALS_PATH = Path("C:/Users/Jack Helmsing/Documents/Helmsing Army Documents/Recruiting/gitignore/atomic-monument-448919-i5-8043c996fb0e.json")
+
+def authorize_gspread():
+    """
+    Authorize gspread client with loaded credentials.
+    """
+    try:
+        creds = Credentials.from_service_account_file(CREDENTIALS_PATH, scopes=[
+            'https://www.googleapis.com/auth/spreadsheets',
+            'https://www.googleapis.com/auth/drive'
+        ])
+        client = gspread.authorize(creds)
+        return client
+    except Exception as e:
+        st.error(f"Error authorizing gspread client: {e}")
+        st.stop()
+
+def get_google_sheet(client, sheet_key, worksheet_name="participant_data"):
+    """
+    Access a specific worksheet in the Google Sheet.
+    """
+    try:
+        sheet = client.open_by_key(sheet_key)
+        worksheet = sheet.worksheet(worksheet_name)
+        data = worksheet.get_all_records(expected_headers=worksheet.row_values(1))
+        return pd.DataFrame(data)
+    except gspread.SpreadsheetNotFound:
+        st.error("Google Sheet not found. Please check the SHEET_KEY.")
+        st.stop()
+    except gspread.WorksheetNotFound:
+        st.error(f"Worksheet '{worksheet_name}' not found in the Google Sheet.")
+        st.stop()
+    except Exception as e:
+        st.error(f"Error accessing Google Sheet: {e}")
+        st.stop()
+
+
+# -------------------------------------------------------------------------
+# 2. File Paths
 # -------------------------------------------------------------------------
 
 # Get the current script's directory (app-two/src/)
@@ -31,7 +73,7 @@ output_csv_path = current_dir.parent / "data" / "output" / "financial_model_plot
 output_html_path = current_dir.parent / "data" / "output" / "plotly_bar_chart_race.html"
 
 # -------------------------------------------------------------------------
-# 2. Load & Merge
+# 3. Load & Merge
 # -------------------------------------------------------------------------
 # Load data from local files
 try:
@@ -57,7 +99,7 @@ merged_data = participant_df.merge(
 )
 
 # -------------------------------------------------------------------------
-# 3. Calculate Monthly Net Worth
+# 4. Calculate Monthly Net Worth
 # -------------------------------------------------------------------------
 def calculate_monthly_financials(row):
     """
