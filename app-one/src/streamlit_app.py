@@ -310,9 +310,7 @@ def main():
         cost_row = lifestyle_data[(lifestyle_data["Category"] == category) & (lifestyle_data["Option"] == choice)]
         if not cost_row.empty:
             cost = float(cost_row["Monthly Cost"].values[0])
-        else:
-            st.error(f"Cost information missing for {choice} in {category}.")
-            cost = 0
+        
 
         # Ensure budget deduction
         remaining_budget -= cost
