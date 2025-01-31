@@ -50,11 +50,9 @@ def get_google_sheet(client, sheet_key, worksheet_name="participant_data"):
         st.error(f"Error accessing Google Sheet: {e}")
         st.stop()
 
-
 # -------------------------------------------------------------------------
 # 2. File Paths
 # -------------------------------------------------------------------------
-
 # Get the current script's directory (app-two/src/)
 current_dir = Path(__file__).parent.resolve()
 
@@ -74,8 +72,13 @@ output_html_path = current_dir.parent / "data" / "output" / "plotly_bar_chart_ra
 # Load data from google sheet
 client = authorize_gspread()
 participant_df = get_google_sheet(client, SHEET_KEY, SHEET_NAME)
-# Load data from local files
 
+# Check if DataFrame is empty before processing
+if participant_df.empty:
+    st.warning("🚨 No participant data found! Please have participants fill out their surveys first.")
+    st.stop()
+    
+# Load data from local files
 try:
     skill_df = pd.read_csv(skillset_cost_worksheet_path)
 except FileNotFoundError as e:
@@ -279,6 +282,11 @@ play_pause_menu = dict(
 # 13. Update Layout with Custom Slider & Buttons
 # -------------------------------------------------------------------------
 fig.update_layout(
+    font=dict(color='black'),  # Set all text to black
+    xaxis=dict(tickfont=dict(color='black')),  # Set x-axis text to black
+    yaxis=dict(tickfont=dict(color='black')),  # Set y-axis text to black
+    plot_bgcolor='white',  # Set background to white
+    paper_bgcolor='white',  # Ensure full figure background is white
     sliders=[custom_slider],
     updatemenus=[play_pause_menu],
     margin=dict(l=50, r=50, t=50, b=200),  # Reduced bottom margin
