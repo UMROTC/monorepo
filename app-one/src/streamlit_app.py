@@ -350,16 +350,16 @@ def main():
         else:
             remaining_budget -= savings
 
-    selected_lifestyle_choices["Savings"] = {"Choice": savings_choice, "Cost": savings}
+        selected_lifestyle_choices["Savings"] = {"Choice": savings_choice, "Cost": savings}
 
     # Update sidebar dynamically
-    remaining_budget_display.markdown(f"### Remaining Monthly Budget: ${remaining_budget:,.2f}")
-    if remaining_budget > 0:
-        remaining_budget_message.success(f"You have ${remaining_budget:,.2f} left.")
-    elif remaining_budget == 0:
-        remaining_budget_message.success("You have balanced your budget!")
-    else:
-        remaining_budget_message.error(f"You have overspent by ${-remaining_budget:,.2f}!")
+        remaining_budget_display.markdown(f"### Remaining Monthly Budget: ${remaining_budget:,.2f}")
+        if remaining_budget > 0:
+            remaining_budget_message.success(f"You have ${remaining_budget:,.2f} left.")
+        elif remaining_budget == 0:
+            remaining_budget_message.success("You have balanced your budget!")
+        else:
+         remaining_budget_message.error(f"You have overspent by ${-remaining_budget:,.2f}!")
 
     # Display a summary of all choices
     st.subheader("Lifestyle Choices Summary")
