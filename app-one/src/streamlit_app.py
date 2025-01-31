@@ -238,7 +238,7 @@ def main():
         
         /* Style the selected option after choosing */
         div[data-testid="stSelectbox"] > label + div > div {
-            background-color: default gray !important;
+            background-color: charcoal gray !important;
             color: white !important;
         }
     </style>
