@@ -231,19 +231,19 @@ def main():
     # Page Appearance
     st.markdown("""
         <style>
-            /* Change dropdown background and text color when open */
+            /* Default dropdown state: Gray background with white text */
             div[data-baseweb="select"] > div {
                 background-color: gray !important;
                 color: white !important;
             }
 
             /* When dropdown is clicked: White background with black text */
-            div[data-baseweb="select"]:focus-within > div {
-            background-color: white !important;
-            color: black !important;
+            div[data-baseweb="select"] div[role="listbox"] {
+                background-color: white !important;
+                color: black !important;
             }
 
-            /* Reset selection to gray background and white text when closed */
+            /* Selected dropdown option should retain original gray background */
             div[data-baseweb="select"] div[aria-selected="true"] {
                 background-color: gray !important;
                 color: white !important;
