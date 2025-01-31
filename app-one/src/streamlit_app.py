@@ -219,6 +219,7 @@ def save_participant_data(data_frame, worksheet):
     except Exception as e:
         st.error(f"Failed to save participant data to Google Sheets: {e}")
 
+
 # ----------------------------------------------------------------------------
 # 3. MAIN APP LOGIC
 # ----------------------------------------------------------------------------
@@ -288,45 +289,43 @@ def main():
     allowed_military_part_time = ["Children", "Who Pays for College", "Health Insurance"]
     allowed_military_full_time = ["Housing", "Food", "Children", "Who Pays for College", "Health Insurance"]
 
- # Step 5: Lifestyle Choices
-st.header("Step 5: Make Lifestyle Choices")
-for idx, category in enumerate(lifestyle_data["Category"].unique()):  # Add idx here
-    if category == "Savings":
-        continue
+    # Step 5: Lifestyle Choices
+    st.header("Step 5: Make Lifestyle Choices")
+    for category in lifestyle_data["Category"].unique():
+        if category == "Savings":
+            continue
 
-    options = lifestyle_data[lifestyle_data["Category"] == category]["Option"].tolist()
-    if "Military" in options:
-        if military_service_choice == "No":
-            options.remove("Military")
-        elif military_service_choice == "Part Time" and category not in allowed_military_part_time:
-            options.remove("Military")
-        elif military_service_choice == "Full Time" and category not in allowed_military_full_time:
-            options.remove("Military")
+        options = lifestyle_data[lifestyle_data["Category"] == category]["Option"].tolist()
+        if "Military" in options:
+            if military_service_choice == "No":
+                options.remove("Military")
+            elif military_service_choice == "Part Time" and category not in allowed_military_part_time:
+                options.remove("Military")
+            elif military_service_choice == "Full Time" and category not in allowed_military_full_time:
+                options.remove("Military")
 
-    choice = st.selectbox(f"Choose your {category.lower()}", options, key=f"{category}_choice_{idx}")  # Now idx is defined
+        choice = st.selectbox(f"Choose your {category.lower()}", options, key=f"{category}_choice")
 
-    try:
-        cost = lifestyle_data[(lifestyle_data["Category"] == category) & (lifestyle_data["Option"] == choice)]["Monthly Cost"].values[0]
-    except IndexError:
-        st.error(f"Cost information missing for {choice} in {category}.")
-        cost = 0
+        try:
+            cost = float(lifestyle_data[(lifestyle_data["Category"] == category) & (lifestyle_data["Option"] == choice)]["Monthly Cost"].values[0])
+        except IndexError:
+            st.error(f"Cost information missing for {choice} in {category}.")
+            cost = 0
 
-    # Ensure budget deduction
-    remaining_budget -= cost
-    expenses += cost
-    selected_lifestyle_choices[category] = {"Choice": choice, "Cost": cost}
+        # Ensure budget deduction
+        remaining_budget -= cost
+        expenses += cost
+        selected_lifestyle_choices[category] = {"Choice": choice, "Cost": cost}
 
+        # Update sidebar dynamically
+        remaining_budget_display.markdown(f"### Remaining Monthly Budget: ${remaining_budget:,.2f}")
+        if remaining_budget > 0:
+            remaining_budget_message.success(f"You have ${remaining_budget:,.2f} left.")
+        elif remaining_budget == 0:
+            remaining_budget_message.success("You have balanced your budget!")
+        else:
+            remaining_budget_message.error(f"You have overspent by ${-remaining_budget:,.2f}!")
 
-    # Update sidebar
-    remaining_budget_display.markdown(f"### Remaining Monthly Budget: ${remaining_budget:,.2f}")
-    if remaining_budget > 0:
-        remaining_budget_message.success(f"You have ${remaining_budget:,.2f} left.")
-    elif remaining_budget == 0:
-        remaining_budget_message.success("You have balanced your budget!")
-    else:
-        remaining_budget_message.error(f"You have overspent by ${-remaining_budget:,.2f}!")
-
-    selected_lifestyle_choices[category] = {"Choice": choice, "Cost": cost}
 
         # Restrict "Military" if needed
     if "Military" in options:
@@ -337,7 +336,7 @@ for idx, category in enumerate(lifestyle_data["Category"].unique()):  # Add idx 
             elif military_service_choice == "Full Time" and category not in allowed_military_full_time:
                 options.remove("Military")  # Remove "Military" unless it's in an allowed category
 
-            choice = st.selectbox(f"Choose your {category.lower()}", options, key=f"{category}_choice_{idx}")
+            choice = st.selectbox(f"Choose your {category.lower()}", options, key=f"{category}_choice")
 
     st.markdown("""
         <style>
