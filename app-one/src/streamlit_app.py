@@ -232,24 +232,24 @@ def main():
     st.markdown("""
         <style>
             /* Change dropdown background and text color when open */
-            div[data-testid="stSelectbox"] > div {
+            div[data-baseweb="select"] > div {
                 background-color: gray !important;
                 color: white !important;
             }
 
-            /* Ensure dropdown options show with white background and black text */
-            div[data-testid="stSelectbox"] div[role="listbox"] {
-                background-color: white !important;
-                color: black !important;
+            /* When dropdown is clicked: White background with black text */
+            div[data-baseweb="select"]:focus-within > div {
+            background-color: white !important;
+            color: black !important;
             }
 
             /* Reset selection to gray background and white text when closed */
-            div[data-testid="stSelectbox"] div[role="combobox"] {
+            div[data-baseweb="select"] div[aria-selected="true"] {
                 background-color: gray !important;
                 color: white !important;
             }
         </style>
-        """, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
         
     urls = setup_paths()
