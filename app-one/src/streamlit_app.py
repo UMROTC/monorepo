@@ -226,31 +226,6 @@ def save_participant_data(data_frame, worksheet):
 
 def main():
     st.title("Budget Simulator")
-
-# Custom CSS for dropdown appearance changes
-    # Page Appearance
-    st.markdown("""
-        <style>
-            /* Default dropdown state: Gray background with white text */
-            div[data-baseweb="select"] > div {
-                background-color: gray !important;
-                color: white !important;
-            }
-
-            /* When dropdown is clicked: White background with black text */
-            div[data-baseweb="select"] div[role="listbox"] {
-                background-color: white !important;
-                color: black !important;
-            }
-
-            /* Selected dropdown option should retain original gray background */
-            div[data-baseweb="select"] div[aria-selected="true"] {
-                background-color: gray !important;
-                color: white !important;
-            }
-        </style>
-    """, unsafe_allow_html=True)
-
         
     urls = setup_paths()
     tax_data = load_csv(urls["tax"])
