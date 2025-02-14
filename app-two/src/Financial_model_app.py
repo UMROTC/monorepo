@@ -106,21 +106,32 @@ def calculate_monthly_financials(row):
     """
     Calculate net worth month-by-month over 25 years = 300 months,
     with 5% annual savings growth and up to 180 monthly loan columns.
+    Applies GI Bill if "Who Pays for College" is "military" and maps it by profession.
+    Prevents errors from missing or zero-value GI Bill references.
     """
-    total_months = 25 * 12  # 300
+    total_months = 25 * 12  # 300 months
     annual_savings_rate = 0.05
-    monthly_savings_rate = (1 + annual_savings_rate)**(1/12) - 1
+    monthly_savings_rate = (1 + annual_savings_rate) ** (1/12) - 1
 
     # Convert years in school -> months
     yrs_school = row.get('Years in School', 0.0)
     months_in_school = int(yrs_school * 12)
 
-    # Savings contributions
+    # Get Savings Contributions
     savings_during_school = row.get('Savings During School', 0.0)
     savings_after_school = row.get('Savings', 0.0)
 
+    # Initialize balances
     savings_balance = 0.0
+    loan_balance = 0.0
     monthly_records = []
+
+    # Check if participant qualifies for GI Bill
+    gi_bill_value = row.get("GI Bill", 0.0)  # Fetch profession-specific GI Bill
+
+    # Ensure GI Bill is a valid numeric value (handle missing or invalid data)
+    if pd.isna(gi_bill_value) or not isinstance(gi_bill_value, (int, float)) or gi_bill_value <= 0:
+        gi_bill_value = 0.0  # Set to zero if invalid
 
     for m in range(1, total_months + 1):
         # 1) Grow existing savings
@@ -132,19 +143,25 @@ def calculate_monthly_financials(row):
         else:
             savings_balance += savings_after_school
 
-        # 3) Loan balance
-        if m <= 180:
+        # 3) Handle student loan balance
+        if m <= 180:  # Loans only apply in the first 15 years
             col_name = f"month {m}"
             loan_val = row.get(col_name, 0.0)
-            if pd.isna(loan_val):
+            if pd.isna(loan_val) or not isinstance(loan_val, (int, float)):
                 loan_val = 0.0
-        else:
-            loan_val = 0.0
+            loan_balance += loan_val
 
-        net_worth = savings_balance + loan_val
+        # 4) Apply GI Bill right after school ends (mapped by profession) only if > 0
+        if m == months_in_school + 1 and gi_bill_value > 0:
+            loan_balance -= gi_bill_value  # Reduce loan balance
+            loan_balance = max(loan_balance, 0)  # Prevent negative values
+
+        # 5) Calculate net worth
+        net_worth = savings_balance - loan_balance
         monthly_records.append((m, net_worth))
 
     return monthly_records
+
 
 # -------------------------------------------------------------------------
 # 5. Fill Missing Columns
