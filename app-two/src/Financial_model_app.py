@@ -113,8 +113,8 @@ merged_data = participant_df.merge(skill_df, on="Profession", how="left") \
 def calculate_monthly_financials(row):
     """
     Calculate net worth month-by-month over 25 years (300 months),
-    applying the GI Bill reduction for military participants **at the start** of the simulation.
-    Uses precomputed monthly student debt values for military participants.
+    applying the GI Bill immediately for military participants,
+    while ensuring non-military participants correctly incur student debt.
     """
     total_months = 25 * 12  # 300 months
     annual_savings_rate = 0.05
@@ -130,35 +130,37 @@ def calculate_monthly_financials(row):
 
     # Initialize balances
     savings_balance = 0.0
-    loan_balance = 0.0
-    monthly_records = []
+    loan_balance = 0.0  # Default to 0, will accumulate debt for non-military
 
-    # Fetch precomputed loan values from GI Bill Application file
+    # Check if participant is military
     is_military = row.get("Who Pays for College", "").strip().lower() == "military"
-    
+
+    # Fetch GI Bill reduction for military participants
+    gi_bill_value = row.get("GI Bill Reduction", 0.0)
+    if pd.isna(gi_bill_value) or not isinstance(gi_bill_value, (int, float)) or gi_bill_value <= 0:
+        gi_bill_value = 0.0  # Ensure safe handling
+
+    # Handle loan balances based on participant type
     if is_military:
-        # Use the precomputed GI Bill reduction immediately at month 1
-        gi_bill_value = row.get("GI Bill Reduction", 0.0)
-        if pd.isna(gi_bill_value) or not isinstance(gi_bill_value, (int, float)) or gi_bill_value <= 0:
-            gi_bill_value = 0.0  # Ensure safe handling
-        
-        # Fetch the remaining debt for military participants
-        for i in range(1, 181):  # Up to 180 months
-            col_name = f"month {i}"
-            remaining_loan_value = row.get(col_name, 0.0)  # Fetch precomputed value
-            if pd.isna(remaining_loan_value) or not isinstance(remaining_loan_value, (int, float)):
-                remaining_loan_value = 0.0  # Default to 0 if missing
-            if i == 1:  # Apply GI Bill immediately at the start of the simulation
-                loan_balance = remaining_loan_value  # Set loan balance to precomputed remaining debt
+        # Use the precomputed remaining loan balance at Month 1
+        loan_balance = row.get("month 1", 0.0)  # Pre-adjusted by GI Bill
+        if pd.isna(loan_balance) or not isinstance(loan_balance, (int, float)):
+            loan_balance = 0.0  # Ensure it's numeric
     else:
-        # Non-military participants carry full student loan balance
+        # Non-military participants accumulate student loan debt month-by-month
         for m in range(1, 181):  # Loans apply for first 15 years
             col_name = f"month {m}"
             loan_val = row.get(col_name, 0.0)
             if pd.isna(loan_val) or not isinstance(loan_val, (int, float)):
                 loan_val = 0.0
-            loan_balance += loan_val
+            loan_balance += loan_val  # Accumulate student debt over time
 
+    # Ensure non-military loans are negative (debt)
+    if not is_military:
+        loan_balance = -abs(loan_balance)  # Make sure debt is always negative
+
+    # Start the month-by-month simulation
+    monthly_records = []
     for m in range(1, total_months + 1):
         # 1) Grow existing savings
         savings_balance *= (1 + monthly_savings_rate)
@@ -169,15 +171,22 @@ def calculate_monthly_financials(row):
         else:
             savings_balance += savings_after_school
 
-        # 3) Apply remaining loan balance (for military participants, this is already adjusted at month 1)
-        if is_military and m == 1:
-            loan_balance = row.get("month 1", loan_balance)  # Ensure correct balance at start
+        # 3) Ensure loan balance for non-military participants grows over time
+        if not is_military and m <= 180:
+            col_name = f"month {m}"
+            loan_addition = row.get(col_name, 0.0)
+            if pd.isna(loan_addition) or not isinstance(loan_addition, (int, float)):
+                loan_addition = 0.0
+            loan_balance -= abs(loan_addition)  # Deduct loan payments over time
 
-        # 4) Calculate net worth
-        net_worth = savings_balance - loan_balance
+        # 4) Calculate net worth (must account for negative debt)
+        net_worth = savings_balance - abs(loan_balance)
+
+        # 5) Store monthly values
         monthly_records.append((m, net_worth))
 
     return monthly_records
+
 
 
 # -------------------------------------------------------------------------
