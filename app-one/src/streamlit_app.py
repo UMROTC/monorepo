@@ -291,6 +291,10 @@ def main():
 
     # Step 5: Lifestyle Choices
     st.header("Step 5: Make Lifestyle Choices")
+
+    # Ensure `who_pays_for_college` is always defined
+    who_pays_for_college = "Unknown"
+
     for category in lifestyle_data["Category"].unique():
         if category == "Savings":
             continue
@@ -317,6 +321,10 @@ def main():
         remaining_budget -= cost
         expenses += cost
         selected_lifestyle_choices[category] = {"Choice": choice, "Cost": cost}
+
+        # **Ensure "Who Pays for College" is captured separately**
+        if category == "Who Pays for College":
+            who_pays_for_college = choice  # Store separately for later use
 
     # Step 5b: Savings
     st.subheader("Savings")
@@ -356,6 +364,8 @@ def main():
             remaining_budget = 0
         else:
             remaining_budget -= savings
+        
+        
 
     # Store savings choice
     selected_lifestyle_choices["Savings"] = {"Choice": savings_choice, "Cost": savings}
@@ -393,13 +403,7 @@ def main():
                 "Profession": [Profession],
                 "Military Service": [selected_lifestyle_choices.get("Military Service", {}).get("Choice", "No")],
                 "Savings": [savings],
-                "Marital Status": [marital_status],
-                "Taxable Income": [taxable_income],
-                "Federal Tax": [federal_tax],
-                "State Tax": [state_tax],
-                "Total Tax": [total_tax],
-                "Monthly Income After Tax": [monthly_income_after_tax],
-                # Add other relevant fields as needed
+                "Who Pays for College": [who_pays_for_college]
             })
 
             # Access the Google Sheet

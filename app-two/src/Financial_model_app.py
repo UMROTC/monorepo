@@ -282,6 +282,14 @@ play_pause_menu = dict(
 # 13. Update Layout with Custom Slider & Buttons
 # -------------------------------------------------------------------------
 fig.update_layout(
+    title=dict(
+        text="Net Worth Over Time",
+        x=0.5,  # Center title
+        y=0.95,  # Position it slightly higher
+        xanchor="center",
+        yanchor="top",
+        font=dict(size=24, color="black")
+    ),    
     font=dict(color='black'),  # Set all text to black
     xaxis=dict(tickfont=dict(color='black')),  # Set x-axis text to black
     yaxis=dict(tickfont=dict(color='black')),  # Set y-axis text to black
