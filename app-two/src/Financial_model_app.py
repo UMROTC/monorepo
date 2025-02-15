@@ -165,20 +165,28 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
 
     return monthly_records
 
-# Apply the function using merged_data (not df1 or df2 separately)
+# Apply the function using merged_data (this contains both skill_df & gi_bill_df)
 merged_data["Net Worth Over Time"] = merged_data.apply(
     lambda row: calculate_monthly_financials(row, skill_df, gi_bill_df), axis=1
 )
 
+# Expand 'Net Worth Over Time' into a structured DataFrame
+expanded_rows = []
+for _, row in merged_data.iterrows():
+    for record in row["Net Worth Over Time"]:
+        expanded_rows.append({
+            "Name": row["Name"],
+            "Profession": row["Profession"],
+            **record  # Expands Month, Savings Balance, Loan Balance, Net Worth
+        })
 
-# Convert results to DataFrame for display
-net_worth_over_time = pd.DataFrame(results.tolist()).transpose()
-net_worth_over_time.columns = [f"Participant {i+1}" for i in range(len(results))]
-net_worth_over_time.insert(0, "Month", range(1, 301))
+# Convert to a new DataFrame
+net_worth_over_time = pd.DataFrame(expanded_rows)
 
 # Display results
 import ace_tools as tools
 tools.display_dataframe_to_user(name="Net Worth Over Time", dataframe=net_worth_over_time)
+
 
 
 # -------------------------------------------------------------------------
