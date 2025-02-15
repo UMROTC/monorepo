@@ -157,7 +157,7 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
             col_name = f"month {month}"
             loan_payment = loan_source.loc[loan_source["profession"] == profession, col_name].values
             loan_payment = float(loan_payment[0]) if len(loan_payment) > 0 else 0.0
-            loan_balance += loan_payment  # Loan payments decrease balance
+            loan_balance += abs(loan_payment)  # Loan payments decrease balance
 
         # Calculate net worth (savings + loan balance)
         net_worth = savings_balance + loan_balance
