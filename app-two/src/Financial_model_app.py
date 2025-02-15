@@ -110,8 +110,6 @@ merged_data = participant_df.merge(skill_df, on="Profession", how="left") \
 # -------------------------------------------------------------------------
 # 4. Calculate Monthly Net Worth
 # -------------------------------------------------------------------------
-import pandas as pd
-
 def calculate_monthly_financials(row, skillset_df, gi_bill_df):
     """
     Calculates net worth month-by-month over 25 years (300 months),
@@ -129,8 +127,16 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
     # Select the correct student loan dataset based on military status
     loan_source = gi_bill_df if is_military else skillset_df
 
-    # Get the initial loan balance from the appropriate dataset
-    loan_balance = loan_source.loc[loan_source["name"] == row["name"], "month 1"].values
+    # Ensure column names are standardized
+    loan_source.columns = loan_source.columns.str.lower().str.strip()
+
+    # Check for correct participant identifier
+    participant_col = "name"  # Change if necessary after checking columns
+    if participant_col not in loan_source.columns:
+        raise KeyError(f"Column '{participant_col}' not found in dataset. Available columns: {loan_source.columns}")
+
+    # Get the initial loan balance
+    loan_balance = loan_source.loc[loan_source[participant_col] == row[participant_col], "month 1"].values
     loan_balance = float(loan_balance[0]) if len(loan_balance) > 0 else 0.0
     loan_balance = min(loan_balance, 0)  # Ensure negative balance
 
@@ -148,7 +154,7 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
         # Apply student loan payments for non-military participants (first 15 years)
         if not is_military and month <= 180:
             col_name = f"month {month}"
-            loan_payment = loan_source.loc[loan_source["name"] == row["name"], col_name].values
+            loan_payment = loan_source.loc[loan_source[participant_col] == row[participant_col], col_name].values
             loan_payment = float(loan_payment[0]) if len(loan_payment) > 0 else 0.0
             loan_balance += loan_payment  # Loan payments decrease balance
 
@@ -164,30 +170,6 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
         })
 
     return monthly_records
-
-# Apply the function using merged_data (this contains both skill_df & gi_bill_df)
-merged_data["Net Worth Over Time"] = merged_data.apply(
-    lambda row: calculate_monthly_financials(row, skill_df, gi_bill_df), axis=1
-)
-
-# Expand 'Net Worth Over Time' into a structured DataFrame
-expanded_rows = []
-for _, row in merged_data.iterrows():
-    for record in row["Net Worth Over Time"]:
-        expanded_rows.append({
-            "Name": row["Name"],
-            "Profession": row["Profession"],
-            **record  # Expands Month, Savings Balance, Loan Balance, Net Worth
-        })
-
-# Convert to a new DataFrame
-net_worth_over_time = pd.DataFrame(expanded_rows)
-
-# Display results
-import ace_tools as tools
-tools.display_dataframe_to_user(name="Net Worth Over Time", dataframe=net_worth_over_time)
-
-
 
 # -------------------------------------------------------------------------
 # 5. Fill Missing Columns
