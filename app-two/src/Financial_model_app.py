@@ -115,88 +115,74 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
     Calculates net worth by month over 25 years (300 months) for a given participant.
     
     Savings Growth:
-      - In-School (months ≤ Years in School * 12):
-            Monthly contribution = (Savings During School from Skillset Cost Worksheet) / (Years in School * 12)
-            Contributions accumulate linearly (no compounding).
-      - After School (starting at month (Years in School * 12 + 1)):
-            Use the regular "Savings" value from participant data (referenced by Name),
-            compounded monthly at a 5% annual rate.
+      - In-School (for m ≤ Years in School * 12):
+            Use (Savings During School from Skillset Cost Worksheet) divided by 
+            (Years in School * 12) as the monthly contribution. Accrue savings linearly.
+      - Post-School (for m > Years in School * 12):
+            Start with the total in-school savings, then add the regular monthly savings 
+            (from participant data, referenced by Name) compounded monthly at a 5% annual rate.
     
     Loan Values:
-      - For non-military participants, the fixed loan value from the Skillset Cost Worksheet is used.
-      - For military participants ("Part Time", "Full Time", or "Military"), the fixed loan value (from the GI Bill Application)
-        is adjusted at the first month after school by zeroing out up to $145,080 of the debt.
-      - No loan payment calculations are performed; the loan value remains fixed.
+      - The fixed loan value is taken from the appropriate reference sheet:
+            • If "Who Pays for College" indicates military service (Part Time, Full Time, or Military),
+              use the GI Bill Application.
+            • Otherwise, use the Skillset Cost Worksheet.
+      - The full student loan value (from month 1) is applied and remains constant.
     
-    Net Worth for each month:
-         Net Worth = Accrued Savings + (Adjusted) Fixed Loan Value
-         
+    Net Worth:
+         Net Worth = Accrued Savings + Fixed Loan Value
+    
     Returns:
-      A list of dictionaries (one per month) with:
+      A list of dictionaries (one per month) containing:
          - Month
          - Accrued Savings
-         - Loan Value (adjusted as needed)
+         - Loan Value (fixed)
          - Net Worth
     """
-    import pandas as pd
-
     total_months = 300
-    # Monthly rate from a 5% annual return compounded monthly
+    # Monthly growth rate from a 5% annual return compounded monthly
     monthly_rate = (1 + 0.05) ** (1/12) - 1
 
     # --- Determine School Duration ---
-    # Use "Years in School" from participant data.
+    # "Years in School" is assumed to be the total number of years the participant attends school.
     yrs_in_school = float(row.get("Years in School", 0))
-    school_months = int(yrs_in_school * 12)  # Total school months
-    first_regular_month = school_months + 1   # First month after school
+    school_months = int(yrs_in_school * 12)
+    first_regular_month = school_months + 1
 
     # --- Savings Contributions ---
-    # For in-school months, use "Savings During School" from the Skillset Cost Worksheet.
+    # For in-school months, we use "Savings During School" from the Skillset Cost Worksheet.
+    # (Assume that column index 5 of skillset_df contains the total "Savings During School" for that career.)
     profession = row.get("Profession", "").strip()
     try:
-        # Assume column index 5 (0-indexed) is "Savings During School" (total value for the entire school period)
         total_savings_during_school = float(
             skillset_df.loc[skillset_df["Profession"] == profession].iloc[0, 5]
         )
     except Exception as e:
         total_savings_during_school = 0.0
-    # Calculate monthly in-school contribution by dividing by total school months
-    monthly_in_school = total_savings_during_school / school_months if school_months > 0 else 0.0
 
-    # After school, use the regular "Savings" value from participant data (referenced by Name)
+    # Compute the monthly in-school contribution by dividing the total by (Years in School * 12).
+    monthly_in_school = total_savings_during_school / (yrs_in_school * 12) if yrs_in_school > 0 else 0.0
+
+    # For post-school months, use the regular "Savings" value from participant data (referenced by Name).
     monthly_savings_regular = float(row.get("Savings", 0.0))
-    
-    # --- Loan Values ---
+
+    # --- Loan Value ---
+    # Choose the loan dataset:
     who_pays = row.get("Who Pays for College", "").strip().lower()
-    # For military participants ("Part Time", "Full Time", or "Military"), use GI Bill Application; otherwise use Skillset Cost Worksheet.
     if who_pays in ["part time", "full time", "military"]:
         loan_source = gi_bill_df
     else:
         loan_source = skillset_df
+    # Standardize column names
     loan_source.columns = loan_source.columns.str.lower().str.strip()
-    
     if profession not in loan_source["profession"].values:
         raise KeyError(f"Profession '{profession}' not found in the loan dataset.")
-    
-    # Retrieve the fixed monthly loan values (columns "month 1" to "month 300")
+    # Get the fixed monthly loan values (we use the value at month 1 as the fixed debt)
     loan_row = loan_source.loc[loan_source["profession"] == profession].iloc[0]
     loan_values_full = loan_row[[f"month {i}" for i in range(1, total_months + 1)]].astype(float)
-    fixed_loan_value = float(loan_values_full["month 1"])  # Full debt as provided at month 1
+    fixed_loan_value = float(loan_values_full["month 1"])  # This value remains fixed throughout.
 
-    # --- Adjust Loan Value for Military Participants ---
-    # For military participants, on the first month after school, zero out up to $145,080 of the loan.
-    if who_pays in ["part time", "full time", "military"]:
-        # Since fixed_loan_value is the full student debt, adjust it:
-        # If the absolute value is <= 145,080, set it to 0.
-        # Otherwise, add 145,080 (i.e. reduce the debt by $145,080).
-        if abs(fixed_loan_value) <= 145080:
-            adjusted_loan_value = 0.0
-        else:
-            adjusted_loan_value = fixed_loan_value + 145080  # fixed_loan_value is negative.
-    else:
-        adjusted_loan_value = fixed_loan_value
-
-    # --- Calculate Accrued Savings by Month ---
+    # --- Calculate Accrued Savings ---
     accrued_savings = []
     for m in range(1, total_months + 1):
         if m <= school_months:
@@ -213,17 +199,15 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
     # --- Compute Net Worth by Month ---
     monthly_financials = []
     for m in range(1, total_months + 1):
-        net_worth = accrued_savings[m - 1] + adjusted_loan_value
+        net_worth = accrued_savings[m - 1] + fixed_loan_value
         monthly_financials.append({
             "Month": m,
             "Accrued Savings": accrued_savings[m - 1],
-            "Loan Value": adjusted_loan_value,
+            "Loan Value": fixed_loan_value,
             "Net Worth": net_worth
         })
     
     return monthly_financials
-
-
 
 # -------------------------------------------------------------------------
 # 5. Fill Missing Columns
