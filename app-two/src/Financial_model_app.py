@@ -112,65 +112,57 @@ merged_data = participant_df.merge(skill_df, on="Profession", how="left") \
 # -------------------------------------------------------------------------
 def calculate_monthly_financials(row):
     """
-    Calculates net worth over 25 years (300 months),
-    ensuring that:
-    - Military participants receive their GI Bill at Month 1.
-    - Non-military participants maintain their full negative loan balance.
-    - Loan payments are correctly applied over time.
+    Calculates net worth month-by-month over 25 years (300 months),
+    ensuring correct loan reference, savings growth, and GI Bill application.
     """
     total_months = 25 * 12  # 300 months
-    annual_savings_rate = 0.05
-    monthly_savings_rate = (1 + annual_savings_rate) ** (1/12) - 1
+    annual_savings_rate = 0.05  # 5% annual return
+    monthly_savings_rate = (1 + annual_savings_rate) ** (1/12) - 1  # Monthly compounding
 
-    # Convert years in school -> months
+    # Get Years in School and Calculate Start Month for Savings
     yrs_school = row.get('Years School', 0.0)
     months_in_school = int(yrs_school * 12)
+    first_savings_month = months_in_school + 1  # First month after school completion
 
     # Get Savings Contributions
-    savings_during_school = row.get('Savings During School', 0.0)
-    savings_after_school = row.get('Savings', 0.0)
-
-    # Initialize balances
-    savings_balance = 0.0
-    loan_balance = row.get("Student Loan value", 0.0)  # Initial student loan value (already negative)
+    monthly_savings = row.get('Savings', 0.0)  # Monthly savings from participant data
 
     # Check if participant is military
     is_military = row.get("Who Pays for College", "").strip().lower() == "military"
 
-    # Fetch GI Bill reduction for military participants
-    gi_bill_value = row.get("GI Bill value", 0.0)
-    if pd.isna(gi_bill_value) or not isinstance(gi_bill_value, (int, float)) or gi_bill_value <= 0:
-        gi_bill_value = 0.0  # Ensure safe handling
-
-    # Apply the GI Bill at Month 1 for military participants
+    # Select the correct student loan dataset based on military status
     if is_military:
-        loan_balance += gi_bill_value  # Reduce loan debt by GI Bill amount
-        loan_balance = min(loan_balance, 0)  # Ensure loan balance does not go positive
+        loan_balance = row.get("month 1", 0.0)  # Military student loan values from GI Bill Application
+    else:
+        loan_balance = row.get("month 1", 0.0)  # Non-military student loan values from Skillset Cost Worksheet
 
-    # Start the month-by-month simulation
+    if pd.isna(loan_balance) or not isinstance(loan_balance, (int, float)):
+        loan_balance = 0.0  # Ensure numeric value
+
+    loan_balance = min(loan_balance, 0)  # Ensure it's negative
+
+    # Start Monthly Simulation
+    savings_balance = 0.0  # Initialize savings balance
     monthly_records = []
+
     for m in range(1, total_months + 1):
-        # 1) Grow existing savings
-        savings_balance *= (1 + monthly_savings_rate)
+        # 1) Grow savings (compounding monthly interest)
+        if m >= first_savings_month:  # Start saving after school ends
+            savings_balance *= (1 + monthly_savings_rate)  # Apply monthly compound interest
+            savings_balance += monthly_savings  # Add the monthly deposit
 
-        # 2) Add monthly deposit
-        if m <= months_in_school:
-            savings_balance += savings_during_school
-        else:
-            savings_balance += savings_after_school
-
-        # 3) Accumulate student loan payments for non-military participants
-        if not is_military and m <= 180:
+        # 2) Apply student loan payments for non-military participants
+        if not is_military and m <= 180:  # Loans apply for first 15 years
             col_name = f"month {m}"
             loan_payment = row.get(col_name, 0.0)
             if pd.isna(loan_payment) or not isinstance(loan_payment, (int, float)):
                 loan_payment = 0.0
-            loan_balance += loan_payment  # Loan balance should still be negative
+            loan_balance += loan_payment  # Loan balance is negative, so add payments
 
-        # 4) Calculate net worth correctly
-        net_worth = savings_balance + loan_balance  # Loan balance is already negative
+        # 3) Calculate net worth (Savings + Loan Balance)
+        net_worth = savings_balance + loan_balance  # Loan balance should be negative for debt
 
-        # 5) Store monthly values
+        # 4) Store monthly records
         monthly_records.append((m, net_worth))
 
     return monthly_records
