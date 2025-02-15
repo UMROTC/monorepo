@@ -139,43 +139,40 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
     import pandas as pd
     
     total_months = 300
-    # Monthly rate from a 5% annual return compounded monthly:
+    # Monthly rate derived from a 5% annual return compounded monthly
     monthly_rate = (1 + 0.05) ** (1/12) - 1
 
-    # --- Use the correct key for years in school ---
+    # --- Use correct key for in-school duration ---
     yrs_school = float(row.get("Years in School", 0))
     school_months = int(yrs_school * 12)  # Total months in school
     first_regular_month = school_months + 1  # First month after school ends
 
     # --- Savings Contributions ---
-    # For "Savings During School", force the value from the Skillset Cost Worksheet.
-    # We look it up by matching on Profession.
+    # For in-school months, look up "Savings During School" from the Skillset Cost Worksheet.
     profession = row.get("Profession", "").strip()
-    # (Assumes the skillset_df has a column named "Savings During School")
     try:
+        # Force use of the Skillset Cost Worksheet reference for in-school savings (assumed column "Savings During School")
         savings_during_school = float(
             skillset_df.loc[skillset_df["Profession"] == profession, "Savings During School"].values[0]
         )
     except Exception as e:
-        # If not found, default to 0
         savings_during_school = 0.0
     monthly_in_school = savings_during_school / 12.0
 
-    # After school, use the regular "Savings" from the participant data.
+    # After school, use the regular "Savings" value from the participant data.
     monthly_savings_regular = float(row.get("Savings", 0.0))
     
     who_pays = row.get("Who Pays for College", "").strip().lower()
     
     # --- Loan Values ---
-    # Select the correct loan dataset based on who pays for college.
+    # Select the correct loan dataset based on who pays for college
     loan_source = gi_bill_df if who_pays == "military" else skillset_df
     loan_source.columns = loan_source.columns.str.lower().str.strip()
     
-    # Use the participant's Profession to look up the loan values.
     if profession not in loan_source["profession"].values:
         raise KeyError(f"Profession '{profession}' not found in the loan dataset.")
     
-    # Retrieve the fixed monthly loan values (columns: "month 1" to "month 300")
+    # Retrieve the fixed monthly loan values (assumed columns: "month 1" to "month 300")
     loan_row = loan_source.loc[loan_source["profession"] == profession].iloc[0]
     loan_values = loan_row[[f"month {i}" for i in range(1, total_months + 1)]].astype(float)
     
@@ -184,13 +181,13 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
     current_savings = 0.0
     for m in range(1, total_months + 1):
         if m <= school_months:
-            # During school: use the in-school monthly contribution
+            # During school: use monthly_in_school contribution.
             if m == 1:
                 current_savings = monthly_in_school
             else:
                 current_savings = current_savings * (1 + monthly_rate) + monthly_in_school
         else:
-            # After school: use the regular monthly savings contribution
+            # After school: use regular monthly savings contribution.
             if m == first_regular_month:
                 current_savings = current_savings * (1 + monthly_rate) + monthly_savings_regular
             else:
