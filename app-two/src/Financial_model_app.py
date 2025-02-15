@@ -110,77 +110,84 @@ merged_data = participant_df.merge(skill_df, on="Profession", how="left") \
 # -------------------------------------------------------------------------
 # 4. Calculate Monthly Net Worth
 # -------------------------------------------------------------------------
-def calculate_monthly_financials(row, skillset_df, gi_bill_df):
+def calculate_net_worth_table(participant_df, skillset_df, gi_bill_df):
     """
-    Calculates net worth month-by-month over 25 years (300 months),
-    ensuring correct loan reference, savings growth, and GI Bill application.
+    Calculates the net worth by month for each participant over 25 years (300 months).
     
-    Key points:
-    - Savings start growing after school ends.
-    - For non-military participants, scheduled loan payments (first 15 years) reduce the debt.
-    - Net Worth = Savings Balance + (Negative) Loan Balance.
-    - Loan payments are taken as positive amounts (by using abs) to reduce the negative balance.
-    
-    The loan datasets are keyed by 'Profession'.
+    Steps:
+      1. Calculate accrued savings by month for each participant.
+         - Savings compound monthly at a 5% annual rate.
+      2. Reference the participant's student loan values by month from the correct dataset:
+         - If Who Pays for College is "Military", use gi_bill_df.
+         - Otherwise, use skillset_df.
+         - Matching is done based on the participant's Profession.
+      3. For each month, add the accrued savings to the given loan value.
+         (No loan payment calculations are done; the loan values remain fixed as provided.)
+      4. Return a DataFrame with columns: Name, Profession, and month 1, month 2, …, month 300.
     """
-    total_months = 300  # 25 years * 12 months
-    monthly_savings_rate = (1 + 0.05) ** (1/12) - 1  # 5% annual return, compounded monthly
+    import pandas as pd
 
-    # Extract key participant details
-    yrs_school = int(row.get('Years School', 0) * 12)  # Convert years to months
-    first_savings_month = yrs_school + 1  # First month after school ends
-    monthly_savings = row.get('Savings', 0.0)  # Monthly savings amount
-    is_military = row.get("Who Pays for College", "").strip().lower() == "military"
+    total_months = 300
+    # Monthly savings growth rate from a 5% annual return compounded monthly
+    monthly_interest_rate = (1 + 0.05) ** (1/12) - 1
 
-    # Select the correct student loan dataset based on military status
-    loan_source = gi_bill_df if is_military else skillset_df
+    # Build a table of accrued savings by month for each participant.
+    # We'll assume that savings start immediately.
+    accrued_savings = {}
+    for idx, row in participant_df.iterrows():
+        name = row["Name"]
+        monthly_savings = float(row.get("Savings", 0.0))
+        savings_by_month = []
+        current_savings = 0.0
+        for month in range(1, total_months + 1):
+            if month == 1:
+                current_savings = monthly_savings
+            else:
+                current_savings = current_savings * (1 + monthly_interest_rate) + monthly_savings
+            savings_by_month.append(current_savings)
+        accrued_savings[name] = savings_by_month
+    # Create a DataFrame from accrued savings (rows=participant Name, columns="month 1", "month 2", ..., "month 300")
+    savings_df = pd.DataFrame(accrued_savings, 
+                              index=[f"month {i}" for i in range(1, total_months + 1)]).T
 
-    # Standardize column names for loan_source
-    loan_source.columns = loan_source.columns.str.lower().str.strip()
+    # For each participant, look up the corresponding monthly loan values.
+    # Use "Who Pays for College" to decide which reference to use,
+    # and match by "Profession".
+    net_worth_df = savings_df.copy()  # We'll add the loan values to these savings.
+    for idx, row in participant_df.iterrows():
+        name = row["Name"]
+        profession = row.get("Profession", "").strip()
+        who_pays = row.get("Who Pays for College", "").strip().lower()
+        # Choose the correct loan dataset.
+        loan_source = gi_bill_df if who_pays == "military" else skillset_df
+        # Standardize column names in the loan source
+        loan_source.columns = loan_source.columns.str.lower().str.strip()
+        # Assume the loan source has a column "profession" that we match against.
+        participant_loan = loan_source[loan_source["profession"] == profession]
+        if not participant_loan.empty:
+            # Extract the monthly loan values for months 1..total_months.
+            # (Assume columns are named exactly "month 1", "month 2", etc.)
+            loan_values = participant_loan.iloc[0][[f"month {i}" for i in range(1, total_months + 1)]]
+            # Convert to float (if not already)
+            loan_values = loan_values.astype(float)
+        else:
+            # If no matching loan row is found, assume zero loan.
+            loan_values = pd.Series([0.0] * total_months, index=[f"month {i}" for i in range(1, total_months + 1)])
+        # Now, net worth = accrued savings + loan value (per month)
+        # (We add elementwise; note: loan values are assumed to be provided and remain fixed.)
+        net_worth_df.loc[name] = net_worth_df.loc[name].astype(float) + loan_values.values
 
-    # Use Profession (the unifying key) to look up loan values
-    profession = row.get("Profession", "").strip()
-    if profession not in loan_source["profession"].values:
-        raise KeyError(f"Profession '{profession}' not found in dataset.")
-
-    # Get the initial loan balance from the correct dataset (for "month 1")
-    loan_balance_arr = loan_source.loc[loan_source["profession"] == profession, "month 1"].values
-    loan_balance = float(loan_balance_arr[0]) if len(loan_balance_arr) > 0 else 0.0
-    # Ensure the loan balance is negative (representing debt)
-    if loan_balance > 0:
-        loan_balance = -loan_balance
-
-    # Initialize savings balance and tracking list
-    savings_balance = 0.0
-    monthly_records = []
-
-    # Simulate monthly financials over 25 years
-    for month in range(1, total_months + 1):
-        # Grow savings only after school finishes
-        if month >= first_savings_month:
-            savings_balance = savings_balance * (1 + monthly_savings_rate) + monthly_savings
-
-        # For non-military participants, apply scheduled loan payments for the first 15 years (180 months)
-        if not is_military and month <= 180:
-            col_name = f"month {month}"
-            loan_payment_arr = loan_source.loc[loan_source["profession"] == profession, col_name].values
-            loan_payment = float(loan_payment_arr[0]) if len(loan_payment_arr) > 0 else 0.0
-            # Force loan_payment to be positive (using abs) so it reduces the debt.
-            loan_payment = abs(loan_payment)
-            loan_balance += loan_payment
-
-        # Calculate net worth (savings balance + loan balance)
-        net_worth = savings_balance + loan_balance
-
-        # Store monthly record
-        monthly_records.append({
-            "Month": month,
-            "Savings Balance": savings_balance,
-            "Loan Balance": loan_balance,
-            "Net Worth": net_worth
-        })
-
-    return monthly_records
+    # Create the final table that includes Name and Profession.
+    final_df = net_worth_df.copy()
+    final_df.reset_index(inplace=True)
+    final_df.rename(columns={"index": "Name"}, inplace=True)
+    # Merge with participant_df to get the Profession column.
+    final_df = final_df.merge(participant_df[["Name", "Profession"]], on="Name", how="left")
+    # Rearrange columns so that Name and Profession come first.
+    month_cols = [col for col in final_df.columns if col.startswith("month")]
+    final_df = final_df[["Name", "Profession"] + month_cols]
+    
+    return final_df
 
 # -------------------------------------------------------------------------
 # 5. Fill Missing Columns
