@@ -195,15 +195,18 @@ merged_data["Net Worth Over Time"] = merged_data.apply(
 # 7. Expand to Long Format
 # -------------------------------------------------------------------------
 expanded_rows = []
-for _, row in merged_data.iterrows():
-    for (m_val, net_worth) in row['Net Worth Over Time']:
+for _, row in merged_data.iterrows():  # Iterate over merged_data, not row directly
+    for record in row["Net Worth Over Time"]:
         expanded_rows.append({
-            'Name': row['Name'],
-            'Profession': row['Profession'],
-            'Month': m_val,
-            'Net Worth': net_worth
+            "Name": row["Name"],
+            "Profession": row["Profession"],
+            "Month": record["Month"],
+            "Savings Balance": record["Savings Balance"],
+            "Loan Balance": record["Loan Balance"],
+            "Net Worth": record["Net Worth"]
         })
 
+# Convert list of dictionaries into a DataFrame
 expanded_df = pd.DataFrame(expanded_rows)
 
 # -------------------------------------------------------------------------
