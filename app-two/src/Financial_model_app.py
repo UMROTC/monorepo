@@ -114,18 +114,17 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
     """
     Calculates net worth month-by-month over 25 years (300 months),
     ensuring correct loan reference, savings growth, and GI Bill application.
-    The calculation is based on:
     
-      - Savings grow at a monthly rate derived from a 5% annual return.
-      - Savings start only after school ends.
-      - For non-military participants, scheduled loan payments (from the dataset) are applied for the first 15 years.
-      - Net Worth = Savings Balance + (Negative) Loan Balance.
+    Key points:
+    - Savings start growing after school ends.
+    - For non-military participants, scheduled loan payments (first 15 years) reduce the debt.
+    - Net Worth = Savings Balance + (Negative) Loan Balance.
+    - Loan payments are taken as positive amounts (by using abs) to reduce the negative balance.
     
-    The loan datasets are referenced by the participant’s Profession.
+    The loan datasets are keyed by 'Profession'.
     """
     total_months = 300  # 25 years * 12 months
-    # Monthly savings growth rate from a 5% annual return, compounded monthly:
-    monthly_savings_rate = (1 + 0.05) ** (1/12) - 1
+    monthly_savings_rate = (1 + 0.05) ** (1/12) - 1  # 5% annual return, compounded monthly
 
     # Extract key participant details
     yrs_school = int(row.get('Years School', 0) * 12)  # Convert years to months
@@ -151,13 +150,13 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
     if loan_balance > 0:
         loan_balance = -loan_balance
 
-    # Initialize savings balance and an empty list to track monthly records
+    # Initialize savings balance and tracking list
     savings_balance = 0.0
     monthly_records = []
 
-    # Simulate monthly financials over 25 years (300 months)
+    # Simulate monthly financials over 25 years
     for month in range(1, total_months + 1):
-        # Grow savings only after school is finished
+        # Grow savings only after school finishes
         if month >= first_savings_month:
             savings_balance = savings_balance * (1 + monthly_savings_rate) + monthly_savings
 
@@ -166,13 +165,14 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
             col_name = f"month {month}"
             loan_payment_arr = loan_source.loc[loan_source["profession"] == profession, col_name].values
             loan_payment = float(loan_payment_arr[0]) if len(loan_payment_arr) > 0 else 0.0
-            # Loan payment reduces the negative loan balance
+            # Force loan_payment to be positive (using abs) so it reduces the debt.
+            loan_payment = abs(loan_payment)
             loan_balance += loan_payment
 
-        # Calculate net worth (savings balance plus loan balance)
+        # Calculate net worth (savings balance + loan balance)
         net_worth = savings_balance + loan_balance
 
-        # Record the monthly details
+        # Store monthly record
         monthly_records.append({
             "Month": month,
             "Savings Balance": savings_balance,
@@ -181,8 +181,6 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
         })
 
     return monthly_records
-
-
 
 # -------------------------------------------------------------------------
 # 5. Fill Missing Columns
