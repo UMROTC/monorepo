@@ -130,16 +130,16 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
     # Ensure column names are standardized
     loan_source.columns = loan_source.columns.str.lower().str.strip()
 
-    # Check for correct participant identifier
-    participant_col = "profession"  # Change this based on your dataset
-    if participant_col not in loan_source.columns:
-        raise KeyError(f"Column '{participant_col}' not found in dataset. Available columns: {loan_source.columns}")
+    # Match based on Profession instead of Name
+    profession = row.get("Profession", "").strip()
 
-    # Get the initial loan balance using the correct column
-    loan_balance = loan_source.loc[loan_source[participant_col] == row[participant_col], "month 1"].values
+    if profession not in loan_source["profession"].values:
+        raise KeyError(f"Profession '{profession}' not found in dataset.")
+
+    # Get the initial loan balance from the correct dataset
+    loan_balance = loan_source.loc[loan_source["profession"] == profession, "month 1"].values
     loan_balance = float(loan_balance[0]) if len(loan_balance) > 0 else 0.0
     loan_balance = min(loan_balance, 0)  # Ensure negative balance
-
 
     # Initialize savings balance and tracking list
     savings_balance = 0.0
@@ -155,7 +155,7 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
         # Apply student loan payments for non-military participants (first 15 years)
         if not is_military and month <= 180:
             col_name = f"month {month}"
-            loan_payment = loan_source.loc[loan_source[participant_col] == row[participant_col], col_name].values
+            loan_payment = loan_source.loc[loan_source["profession"] == profession, col_name].values
             loan_payment = float(loan_payment[0]) if len(loan_payment) > 0 else 0.0
             loan_balance += loan_payment  # Loan payments decrease balance
 
@@ -171,6 +171,7 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
         })
 
     return monthly_records
+
 
 # -------------------------------------------------------------------------
 # 5. Fill Missing Columns
