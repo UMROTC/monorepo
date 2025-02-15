@@ -131,14 +131,15 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
     loan_source.columns = loan_source.columns.str.lower().str.strip()
 
     # Check for correct participant identifier
-    participant_col = "name"  # Change if necessary after checking columns
+    participant_col = "profession"  # Change this based on your dataset
     if participant_col not in loan_source.columns:
         raise KeyError(f"Column '{participant_col}' not found in dataset. Available columns: {loan_source.columns}")
 
-    # Get the initial loan balance
+    # Get the initial loan balance using the correct column
     loan_balance = loan_source.loc[loan_source[participant_col] == row[participant_col], "month 1"].values
     loan_balance = float(loan_balance[0]) if len(loan_balance) > 0 else 0.0
     loan_balance = min(loan_balance, 0)  # Ensure negative balance
+
 
     # Initialize savings balance and tracking list
     savings_balance = 0.0
