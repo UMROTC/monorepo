@@ -215,8 +215,8 @@ for _, row in merged_data.iterrows():  # Iterate over merged_data, not row direc
             "Profession": row["Profession"],
             "Month": record["Month"],
             "Savings Balance": record["Accrued Savings"],
-            "Loan Balance": record["Loan Balance"],
-            "Net Worth": record["Net Worth"]
+            "Loan Balance": record["Loan_val"],
+            "Net Worth": record["Net_Worth"]
         })
 
 # Convert list of dictionaries into a DataFrame
