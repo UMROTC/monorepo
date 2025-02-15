@@ -110,7 +110,7 @@ merged_data = participant_df.merge(skill_df, on="Profession", how="left") \
 # -------------------------------------------------------------------------
 # 4. Calculate Monthly Net Worth
 # -------------------------------------------------------------------------
-def calculate_monthly_financials(row):
+def calculate_monthly_financials(row, skillset_df, gi_bill_df):
     """
     Calculates net worth month-by-month over 25 years (300 months),
     ensuring correct loan reference, savings growth, and GI Bill application.
@@ -132,9 +132,13 @@ def calculate_monthly_financials(row):
 
     # Select the correct student loan dataset based on military status
     if is_military:
-        loan_balance = row.get("month 1", 0.0)  # Military student loan values from GI Bill Application
+        loan_source = gi_bill_df  # Use GI Bill Application data
     else:
-        loan_balance = row.get("month 1", 0.0)  # Non-military student loan values from Skillset Cost Worksheet
+        loan_source = skillset_df  # Use Skillset Cost Worksheet data
+
+    # Extract the correct loan balance for month 1
+    loan_balance = loan_source.loc[loan_source["name"] == row["name"], "month 1"].values
+    loan_balance = loan_balance[0] if len(loan_balance) > 0 else 0.0
 
     if pd.isna(loan_balance) or not isinstance(loan_balance, (int, float)):
         loan_balance = 0.0  # Ensure numeric value
@@ -154,7 +158,9 @@ def calculate_monthly_financials(row):
         # 2) Apply student loan payments for non-military participants
         if not is_military and m <= 180:  # Loans apply for first 15 years
             col_name = f"month {m}"
-            loan_payment = row.get(col_name, 0.0)
+            loan_payment = loan_source.loc[loan_source["name"] == row["name"], col_name].values
+            loan_payment = loan_payment[0] if len(loan_payment) > 0 else 0.0
+
             if pd.isna(loan_payment) or not isinstance(loan_payment, (int, float)):
                 loan_payment = 0.0
             loan_balance += loan_payment  # Loan balance is negative, so add payments
