@@ -145,7 +145,7 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
 
     # --- Determine School Duration ---
     # "Years in School" is assumed to be the total number of years the participant attends school.
-    yrs_in_school = float(row.get("Years in School", 0))
+    yrs_in_school = float(row.get("Years School", 0))
     school_months = int(yrs_in_school * 12)
     first_regular_month = school_months + 1
 
