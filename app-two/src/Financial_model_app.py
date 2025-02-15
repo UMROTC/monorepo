@@ -115,17 +115,17 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
     Calculates net worth by month over 25 years (300 months) for a participant.
     
     In-School Phase (months ≤ Years in School * 12):
-      - Monthly in-school savings = (Savings During School from Skillset Cost Worksheet) / (Years in School * 12)
-      - Accrued savings = m * (monthly in-school savings)   [No compounding]
-    
+      - Fixed monthly in-school savings = $104/month for all students in college.
+      - Accrued savings = m * 104   [No compounding]
+
     Post-School Phase (months > Years in School * 12):
       - At m = (Years in School * 12) + 1, accrued savings = (total in-school savings) + (regular monthly savings)
       - For subsequent months, accrued savings compound at 5% annual (monthly rate) and add regular monthly savings.
-    
+
     Loan Values:
       - The loan value is retrieved **per month** from the correct dataset (Skillset Cost for non-military, GI Bill for military).
       - The loan value used for each month is directly taken from its respective column (month 1, month 2, ..., month 300).
-    
+
     Net Worth for each month is:
          Net Worth = Accrued Savings + Loan Value for that Month
          
@@ -135,32 +135,22 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
     """
     total_months = 300
     monthly_rate = (1 + 0.05) ** (1/12) - 1  # Monthly rate for 5% annual compounding
+    fixed_in_school_savings = 104  # Fixed $104 per month for college students
 
     # --- Determine School Duration ---
     yrs_in_school = float(row.get("Years in School", 0))
     school_months = int(yrs_in_school * 12)
     first_regular_month = school_months + 1
 
-    # --- In-School Savings Contribution ---
-    profession = row.get("Profession", "").strip()
-    try:
-        total_savings_during_school = float(
-            skillset_df.loc[skillset_df["Profession"] == profession].iloc[0, 5]
-        )
-    except Exception as e:
-        total_savings_during_school = 0.0
-
-    # Monthly in-school contribution = total_savings_during_school / (Years in School * 12)
-    monthly_in_school = total_savings_during_school / (yrs_in_school * 12) if yrs_in_school > 0 else 0.0
-
     # --- Post-School Savings Contribution ---
-    monthly_savings_regular = float(row.get("Savings", 0.0))
+    monthly_savings_regular = float(row.get("Savings", 0.0))  # From participant data sheet
 
     # --- Loan Value (Now Uses Monthly Values Instead of Fixed Amount) ---
     who_pays = row.get("Who Pays for College", "").strip().lower()
     loan_source = gi_bill_df if who_pays in ["part time", "full time", "military"] else skillset_df
     loan_source.columns = loan_source.columns.str.lower().str.strip()
 
+    profession = row.get("Profession", "").strip()
     if profession not in loan_source["profession"].values:
         raise KeyError(f"Profession '{profession}' not found in the loan dataset.")
 
@@ -172,11 +162,11 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
     accrued_savings = []
     for m in range(1, total_months + 1):
         if m <= school_months:
-            # During school: accumulate savings linearly (no compounding)
-            current_savings = monthly_in_school * m
+            # During school: accumulate savings linearly at a fixed $104/month
+            current_savings = fixed_in_school_savings * m
         elif m == first_regular_month:
             # First month after school: total in-school savings + one month of regular savings
-            current_savings = (monthly_in_school * school_months) + monthly_savings_regular
+            current_savings = (fixed_in_school_savings * school_months) + monthly_savings_regular
         else:
             # Post-school: compound previous month's savings and add regular savings
             current_savings = accrued_savings[-1] * (1 + monthly_rate) + monthly_savings_regular
@@ -195,7 +185,6 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
         })
 
     return monthly_financials
-
 
 # -------------------------------------------------------------------------
 # 5. Fill Missing Columns
