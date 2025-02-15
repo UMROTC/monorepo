@@ -214,7 +214,7 @@ for _, row in merged_data.iterrows():  # Iterate over merged_data, not row direc
             "Name": row["Name"],
             "Profession": row["Profession"],
             "Month": record["Month"],
-            "Savings Balance": record["Savings Balance"],
+            "Savings Balance": record["Accrued Savings"],
             "Loan Balance": record["Loan Balance"],
             "Net Worth": record["Net Worth"]
         })
