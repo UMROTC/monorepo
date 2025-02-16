@@ -112,7 +112,7 @@ merged_data = participant_df.merge(skill_df, on="Profession", how="left") \
 # -------------------------------------------------------------------------
 def calculate_monthly_financials(row, skillset_df, gi_bill_df):
     """
-    Calculates net worth by month over 25 years (300 months) for a participant.
+    Calculates monthly net worth over 25 years (300 months) for a participant.
     
     In-School Phase (months ≤ Years in School * 12):
       - Fixed monthly in-school savings = $104/month for all students in college.
@@ -162,14 +162,15 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
     accrued_savings = []
     for m in range(1, total_months + 1):
         if m <= school_months:
-            # During school: accumulate savings linearly at a fixed $104/month
+            # During school: accumulate savings at exactly $104/month
             current_savings = fixed_in_school_savings * m
         elif m == first_regular_month:
-            # First month after school: total in-school savings + one month of regular savings
+            # FIRST month after school: total in-school savings + one month of regular savings (no compounding)
             current_savings = (fixed_in_school_savings * school_months) + monthly_savings_regular
         else:
-            # Post-school: compound previous month's savings and add regular savings
-            current_savings = accrued_savings[-1] * (1 + monthly_rate) + monthly_savings_regular
+            # AFTER school: Compound previous month's savings and add regular savings
+            previous_savings = accrued_savings[-1] if accrued_savings else 0  # Prevent index errors
+            current_savings = previous_savings * (1 + monthly_rate) + monthly_savings_regular
         accrued_savings.append(current_savings)
 
     # --- Compute Net Worth by Month Using the Correct Loan Values ---
@@ -185,6 +186,7 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
         })
 
     return monthly_financials
+
 
 # -------------------------------------------------------------------------
 # 5. Fill Missing Columns
