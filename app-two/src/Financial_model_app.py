@@ -195,6 +195,26 @@ print("Merged columns:", merged_data.columns.tolist())
 merged_data["Net Worth Over Time"] = merged_data.apply(
     lambda row: calculate_monthly_financials(row, skill_df, gi_bill_df), axis=1
 )
+for idx, each_row in merged_data.iterrows():
+    # Decide which loan_source
+    ms = str(each_row.get("Military Service", "")).lower().strip()
+    if ms == "no":
+        loan_source = skill_df
+    else:
+        loan_source = gi_bill_df
+
+    # Grab the participant's profession
+    prof = str(each_row.get("profession", "")).lower().strip()
+
+    # Attempt to locate that profession in loan_source
+    matching_rows = loan_source.loc[loan_source["profession"] == prof]
+
+    if matching_rows.empty:
+        print(
+            f"[DEBUG] Row {idx} => Name={each_row.get('Name')!r}, "
+            f"profession={prof!r} => NOT FOUND in {('skill_df' if ms=='no' else 'gi_bill_df')}"
+        )
+
 # -------------------------------------------------------------------------
 # 7. Expand to Long Format
 # -------------------------------------------------------------------------
