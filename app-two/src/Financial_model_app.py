@@ -111,92 +111,68 @@ merged_data = participant_df.merge(skill_df, on="Profession", how="left") \
 # 4. Calculate Monthly Net Worth
 # -------------------------------------------------------------------------
 def calculate_monthly_financials(row, skill_df, gi_bill_df):
-    """
-    Calculate monthly net worth for one participant over 300 months:
-      - 1..MonthsSchool: Only 'Monthly Savings in School' each month (no compounding).
-      - MonthsSchool+1..300: 
-          Accrued savings grows 5% APY (monthly_rate), 
-          plus the participant's regular 'Monthly Savings'.
-      - Net worth each month = Accrued Savings + Loan Value (from either skill_df or gi_bill_df).
-    """
-
-    # 1) Basic Constants
     total_months = 300
-    # Convert 5% APR to a monthly compounding factor:
-    monthly_rate = (1 + 0.05) ** (1/12) - 1  # ~0.004074
+    monthly_rate = (1 + 0.05) ** (1/12) - 1  # ~0.00407 for 5% APR
 
-    # 2) Read participant data fields
-    months_school = int(row.get("Months School", 0))  # e.g., 24 means 24 months in school
+    # 1) Pull participant's data
+    months_school = int(row.get("Months School", 0))
     monthly_in_school_savings = float(row.get("Monthly Savings in School", 0.0))
     monthly_post_school_savings = float(row.get("Monthly Savings", 0.0))
 
-    # 3) Decide which reference sheet to use
-    #    (Assumes the participant data has a column named 'Military Service'
-    #     with value 'no' or anything else.)
-    military_pref = str(row.get("Military Service", "")).strip().lower()
-    if military_pref == "no":
+    # 2) Decide which loan data to use
+    military_status = str(row.get("Military Service", "")).lower()
+    if military_status == "no":
         loan_source = skill_df
     else:
         loan_source = gi_bill_df
 
-    # 4) Retrieve the monthly loan values by profession
-    profession = str(row.get("Profession", "")).strip()
-    # Ensure columns are normalized to match
+    # 3) Identify correct row for the participant's profession
+    profession = str(row.get("Profession", "")).lower().strip()
     loan_source.columns = loan_source.columns.str.lower().str.strip()
+    loan_row = loan_source.loc[loan_source["profession"] == profession].iloc[0]
 
-    if profession.lower() not in loan_source["profession"].str.lower().values:
-        raise KeyError(f"Profession '{profession}' not found in the selected loan dataset.")
-
-    # Locate the correct row in skill_df or gi_bill_df
-    loan_row = loan_source.loc[
-        loan_source["profession"].str.lower() == profession.lower()
-    ].iloc[0]
-
-    # Extract monthly columns: 'month 1'..'month 300'
+    # 4) Extract monthly loan values
     loan_values = loan_row[[f"month {i}" for i in range(1, total_months + 1)]].astype(float).values
 
-    # 5) Accumulate savings month by month
+    # 5) Accumulate savings each month
     accrued_savings = []
     for m in range(1, total_months + 1):
         if m == 1:
-            # First month, either in school or post-school
-            if m <= months_school:
-                # Still in school => Just add the in-school savings
+            # First month
+            if months_school >= 1:  
+                # If he's in school for at least 1 month
                 current_savings = monthly_in_school_savings
             else:
-                # Not in school => start with post-school savings (with compounding if you like)
-                # But typically for the first month, there's no "previous" to compound
+                # Not in school from month 1 => post-school
                 current_savings = monthly_post_school_savings
         else:
-            # Subsequent months
-            previous_savings = accrued_savings[-1]
+            # For subsequent months, look at the previous month's savings
+            prev_savings = accrued_savings[-1]
             if m <= months_school:
-                # Still in school => no compounding, just add in-school savings
-                current_savings = previous_savings + monthly_in_school_savings
-            elif m == months_school + 1:
-                # The very first month right after school => begin compounding + monthly savings
-                current_savings = previous_savings * (1 + monthly_rate) + monthly_post_school_savings
+                # Still in school => no compounding, just add the in-school rate
+                current_savings = prev_savings + monthly_in_school_savings
+            elif m == (months_school + 1):
+                # The first month after school => start compounding + monthly_post_school_savings
+                current_savings = prev_savings * (1 + monthly_rate) + monthly_post_school_savings
             else:
-                # Fully out of school => compounding + monthly post-school savings
-                current_savings = previous_savings * (1 + monthly_rate) + monthly_post_school_savings
+                # Fully out of school => compounding + monthly_post_school_savings
+                current_savings = prev_savings * (1 + monthly_rate) + monthly_post_school_savings
 
         accrued_savings.append(current_savings)
 
-    # 6) Compute the net worth for each month
+    # 6) Net Worth = Accrued Savings + Loan Value
     monthly_financials = []
     for m in range(1, total_months + 1):
         idx = m - 1
-        loan_for_this_month = loan_values[idx]  # The cost or stipend from row's 'month X' column
-        net_worth = accrued_savings[idx] + loan_for_this_month
+        net_worth = accrued_savings[idx] + loan_values[idx]
         monthly_financials.append({
             "Month": m,
             "Accrued Savings": accrued_savings[idx],
-            "Loan Value": loan_for_this_month,
+            "Loan Value": loan_values[idx],
             "Net Worth": net_worth
         })
 
     return monthly_financials
-
 
 
 # -------------------------------------------------------------------------
