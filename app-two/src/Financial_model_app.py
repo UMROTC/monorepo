@@ -107,6 +107,20 @@ skill_df.columns = skill_df.columns.str.strip()
 merged_data = participant_df.merge(skill_df, on="profession", how="left") \
 .merge(gi_bill_df, on="profession", how="left")
 
+for i, row in merged_data.iterrows():
+    ms = str(row.get("Military Service", "")).lower().strip()
+    if ms == "no":
+        loan_source = skill_df
+    else:
+        loan_source = gi_bill_df
+
+    prof = str(row.get("profession", "")).lower().strip()
+    
+    # Find all matches for this profession
+    matching = loan_source.loc[loan_source["profession"].str.lower().str.strip() == prof]
+    if matching.empty:
+        print(f"Row {i}, Name={row.get('Name')}, Profession='{prof}' => NOT FOUND in {'skill_df' if ms=='no' else 'gi_bill_df'}")
+
 # -------------------------------------------------------------------------
 # 4. Calculate Monthly Net Worth
 # -------------------------------------------------------------------------
