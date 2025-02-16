@@ -187,6 +187,8 @@ for i in range(1, 301):
     if c_name in merged_data.columns:
         merged_data[c_name] = merged_data[c_name].fillna(0)
 
+print("Merged columns:", merged_data.columns.tolist())
+
 # -------------------------------------------------------------------------
 # 6. Add Net Worth Column
 # -------------------------------------------------------------------------
