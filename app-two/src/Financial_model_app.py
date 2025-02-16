@@ -178,11 +178,11 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
 # -------------------------------------------------------------------------
 # 5. Fill Missing Columns
 # -------------------------------------------------------------------------
-for col in ['Years School', 'Savings During School', 'Savings']:
+for col in ['Months School', 'Monthly Savings in School', 'Monthly Savings']:
     if col in merged_data.columns:
         merged_data[col] = merged_data[col].fillna(0)
 
-for i in range(1, 181):
+for i in range(1, 301):
     c_name = f"month {i}"
     if c_name in merged_data.columns:
         merged_data[c_name] = merged_data[c_name].fillna(0)
