@@ -138,14 +138,14 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
     fixed_in_school_savings = 104  # Fixed $104 per month for college students
 
     # --- Determine School Duration ---
-    yrs_in_school = float(row.get("Years School", 0))
+    yrs_in_school = float(row.get("Years in School", 0))
     school_months = int(yrs_in_school * 12)
     first_regular_month = school_months + 1
 
     # --- Post-School Savings Contribution ---
     monthly_savings_regular = float(row.get("Savings", 0.0))  # From participant data sheet
 
-    # --- Loan Value (Now Uses Monthly Values Instead of Fixed Amount) ---
+    # --- Loan Value (Uses Monthly Values Instead of Fixed Amount) ---
     who_pays = row.get("Who Pays for College", "").strip().lower()
     loan_source = gi_bill_df if who_pays in ["part time", "full time", "military"] else skillset_df
     loan_source.columns = loan_source.columns.str.lower().str.strip()
@@ -162,13 +162,13 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
     accrued_savings = []
     for m in range(1, total_months + 1):
         if m <= school_months:
-            # During school: accumulate savings at exactly $104/month
+            # During school: accumulate savings at exactly $104/month (no compounding)
             current_savings = fixed_in_school_savings * m
         elif m == first_regular_month:
-            # FIRST month after school: total in-school savings + one month of regular savings (no compounding)
+            # First month after school: Total in-school savings + first month of post-school savings (no compounding)
             current_savings = (fixed_in_school_savings * school_months) + monthly_savings_regular
         else:
-            # AFTER school: Compound previous month's savings and add regular savings
+            # After school: Apply 5% annual compounding + regular savings contribution
             previous_savings = accrued_savings[-1] if accrued_savings else 0  # Prevent index errors
             current_savings = previous_savings * (1 + monthly_rate) + monthly_savings_regular
         accrued_savings.append(current_savings)
@@ -184,9 +184,9 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
             "Loan Value": loan_value_for_month,
             "Net Worth": net_worth
         })
-    print(f"Month {m}: Accrued Savings = {current_savings}, Loan Value = {loan_value_for_month}, Net Worth = {net_worth}")
 
     return monthly_financials
+
 
 
 # -------------------------------------------------------------------------
