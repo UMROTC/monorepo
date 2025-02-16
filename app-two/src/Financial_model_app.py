@@ -103,9 +103,9 @@ except Exception as e:
 participant_df.columns = participant_df.columns.str.strip()
 skill_df.columns = skill_df.columns.str.strip()
 
-# Merge on 'Career' (participant_df) vs 'Profession' (skill_df)
-merged_data = participant_df.merge(skill_df, on="Profession", how="left") \
-.merge(gi_bill_df, on="Profession", how="left")
+# Merge on 'Career' (participant_df) vs 'profession' (skill_df)
+merged_data = participant_df.merge(skill_df, on="profession", how="left") \
+.merge(gi_bill_df, on="profession", how="left")
 
 # -------------------------------------------------------------------------
 # 4. Calculate Monthly Net Worth
@@ -127,9 +127,9 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
         loan_source = gi_bill_df
 
     # 3) Identify correct row for the participant's profession
-    profession = str(row.get("Profession", "")).lower().strip()
+    profession = str(row.get("profession", "")).lower().strip()
     loan_source.columns = loan_source.columns.str.lower().str.strip()
-    loan_row = loan_source.loc[loan_source["Profession"] == profession].iloc[0]
+    loan_row = loan_source.loc[loan_source["profession"] == profession].iloc[0]
 
     # 4) Extract monthly loan values
     loan_values = loan_row[[f"month {i}" for i in range(1, total_months + 1)]].astype(float).values
@@ -203,7 +203,7 @@ for _, row in merged_data.iterrows():  # Iterate over merged_data, not row direc
     for record in row["Net Worth Over Time"]:
         expanded_rows.append({
             "Name": row["Name"],
-            "Profession": row["Profession"],
+            "profession": row["profession"],
             "Month": record["Month"],
             "Savings Balance": record["Accrued Savings"],
             "Loan Balance": record["Loan Value"],
@@ -237,14 +237,14 @@ fig = px.bar(
     x="Net Worth",
     y="Name",
     orientation="h",
-    color="Profession",  # Color by career/profession
+    color="profession",  # Color by career/profession
     animation_frame="Month",
     text="Net Worth Label",
     title="Net Worth Over 25 Years - Yearly Slider & Pause Fix",
     labels={
         "Net Worth": "Net Worth ($)",
         "Name": "Participants",
-        "Profession": "Career"
+        "profession": "Career"
     },
     color_discrete_sequence=px.colors.qualitative.Set2  # Optional
 )
