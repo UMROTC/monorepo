@@ -129,7 +129,7 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
     # 3) Identify correct row for the participant's profession
     profession = str(row.get("Profession", "")).lower().strip()
     loan_source.columns = loan_source.columns.str.lower().str.strip()
-    loan_row = loan_source.loc[loan_source["profession"] == profession].iloc[0]
+    loan_row = loan_source.loc[loan_source["Profession"] == profession].iloc[0]
 
     # 4) Extract monthly loan values
     loan_values = loan_row[[f"month {i}" for i in range(1, total_months + 1)]].astype(float).values
