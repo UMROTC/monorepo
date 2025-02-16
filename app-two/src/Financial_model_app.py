@@ -209,11 +209,25 @@ for idx, each_row in merged_data.iterrows():
     # Attempt to locate that profession in loan_source
     matching_rows = loan_source.loc[loan_source["profession"] == prof]
 
-    if matching_rows.empty:
-        print(
-            f"[DEBUG] Row {idx} => Name={each_row.get('Name')!r}, "
-            f"profession={prof!r} => NOT FOUND in {('skill_df' if ms=='no' else 'gi_bill_df')}"
-        )
+    for i, participant_row in merged_data.iterrows():
+    # "Military Service" deciding factor
+        ms = str(participant_row.get("Military Service", "")).lower().strip()
+        if ms == "no":
+            loan_source = skill_df
+        else:
+            loan_source = gi_bill_df
+
+    # The participant's profession
+    prof = str(participant_row.get("profession", "")).lower().strip()
+
+    # Which rows in loan_source match this profession?
+    subset = loan_source.loc[loan_source["profession"].str.lower().str.strip() == prof]
+
+    if subset.empty:
+        print(f"Row {i} => Name={participant_row.get('Name')} "
+              f"profession='{prof}' => NOT FOUND in "
+              f"{'skill_df' if ms=='no' else 'gi_bill_df'}")
+
 
 # -------------------------------------------------------------------------
 # 7. Expand to Long Format
