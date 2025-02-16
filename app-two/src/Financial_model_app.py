@@ -138,7 +138,7 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
     fixed_in_school_savings = 104  # Fixed $104 per month for college students
 
     # --- Determine School Duration ---
-    yrs_in_school = float(row.get("Years in School", 0))
+    yrs_in_school = float(row.get("Years School", 0))
     school_months = int(yrs_in_school * 12)
     first_regular_month = school_months + 1
 
@@ -192,7 +192,7 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
 # -------------------------------------------------------------------------
 # 5. Fill Missing Columns
 # -------------------------------------------------------------------------
-for col in ['Years in School', 'Savings During School', 'Savings']:
+for col in ['Years School', 'Savings During School', 'Savings']:
     if col in merged_data.columns:
         merged_data[col] = merged_data[col].fillna(0)
 
