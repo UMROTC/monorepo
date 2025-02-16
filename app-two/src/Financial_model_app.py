@@ -184,6 +184,7 @@ def calculate_monthly_financials(row, skillset_df, gi_bill_df):
             "Loan Value": loan_value_for_month,
             "Net Worth": net_worth
         })
+    print(f"Month {m}: Accrued Savings = {current_savings}, Loan Value = {loan_value_for_month}, Net Worth = {net_worth}")
 
     return monthly_financials
 
