@@ -115,6 +115,13 @@ for i, row in participant_df.iterrows():
         print(f"[DEBUG] Row={i}, Name='{row.get('Name')}', profession='{row.get('profession')}'"
               f" => NOT FOUND in {'skill_df' if ms.lower()=='no' else 'gi_bill_df'}")
 
+# Debug: Print out "Months School" for each participant
+for index, row in participant_df.iterrows():
+    months_school = row.get("Months School", "N/A")
+    profession = row.get("profession", "N/A")
+    name = row.get("Name", "N/A")
+    print(f"Participant: {name} | Profession: {profession} | Months School: {months_school}")
+
 # -------------------------------------------------------------------------
 # 4. Calculate Monthly Net Worth
 # -------------------------------------------------------------------------
