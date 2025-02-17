@@ -91,27 +91,29 @@ except Exception as e:
     print(f"Error loading files: {e}")
     exit()
 
-# Standardize column names (remove extra spaces)
+# Standardize column names by stripping whitespace (preserve capitalization)
 participant_df.columns = participant_df.columns.str.strip()
 skill_df.columns = skill_df.columns.str.strip()
+# (gi_bill_df remains as loaded; ensure its headers are also properly stripped if necessary)
+gi_bill_df.columns = gi_bill_df.columns.str.strip()
 
-# (We do NOT merge the financial data with the participant data here.)
 print("Participant data columns:", participant_df.columns.tolist())
 print("Skillset cost worksheet columns:", skill_df.columns.tolist())
 print("GI Bill data columns:", gi_bill_df.columns.tolist())
 
-# Optional debug loop to check if each participant's profession exists in the correct source:
+# Optional debug loop to check each participant's profession in the appropriate financial data:
 for i, row in participant_df.iterrows():
-    ms = str(row.get("Military Service", "")).lower().strip()
-    if ms == "no":
+    ms = str(row.get("Military Service", "")).strip()
+    if ms.lower() == "no":
         loan_source = skill_df
     else:
         loan_source = gi_bill_df
-    prof = str(row.get("profession", "")).lower().strip()
-    matching = loan_source.loc[loan_source["profession"].str.lower().str.strip() == prof]
+    # Do not change case; just strip whitespace
+    prof = str(row.get("profession", "")).strip()
+    matching = loan_source.loc[loan_source["profession"].str.strip() == prof]
     if matching.empty:
         print(f"[DEBUG] Row={i}, Name='{row.get('Name')}', profession='{row.get('profession')}'"
-              f" => NOT FOUND in {'skill_df' if ms=='no' else 'gi_bill_df'}")
+              f" => NOT FOUND in {'skill_df' if ms.lower()=='no' else 'gi_bill_df'}")
 
 # -------------------------------------------------------------------------
 # 4. Calculate Monthly Net Worth
@@ -126,22 +128,23 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
     monthly_post_school_savings = float(row.get("Monthly Savings", 0.0))
 
     # 2) Decide which loan data to use based on Military Service
-    military_status = str(row.get("Military Service", "")).lower().strip()
-    if military_status == "no":
+    military_status = str(row.get("Military Service", "")).strip()
+    if military_status.lower() == "no":
         loan_source = skill_df.copy()
     else:
         loan_source = gi_bill_df.copy()
 
     # 3) Save the original profession (for display) and standardize for lookup
-    original_profession = row.get("profession", "")
-    loan_source.columns = loan_source.columns.str.lower().str.strip()
-    profession = original_profession.lower().strip()
+    original_profession = row.get("profession", "").strip()
+    # Standardize loan_source columns by stripping whitespace (do not change case)
+    loan_source.columns = loan_source.columns.str.strip()
+    # Create a standardized version for matching (without changing capitalization)
+    profession = original_profession
 
     # 4) Filter the loan_source by the standardized profession
-    subset = loan_source.loc[loan_source["profession"] == profession]
+    subset = loan_source.loc[loan_source["profession"].str.strip() == profession]
     if subset.empty:
         print(f"[DEBUG] Profession '{profession}' not found in the selected loan source.")
-        # Return default financials instead of an empty list
         default_financials = []
         for m in range(1, total_months + 1):
             default_financials.append({
@@ -200,14 +203,14 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
 
     return monthly_financials
 
-# Apply the calculation function to participant data (no merge needed)
+# Apply the calculation function to participant data (no merging with financial data)
 participant_df["Net Worth Over Time"] = participant_df.apply(
     lambda row: calculate_monthly_financials(row, skill_df, gi_bill_df),
     axis=1
 )
 
 # -------------------------------------------------------------------------
-# 5. Fill Missing Columns (if needed in participant_df)
+# 5. Fill Missing Columns in participant_df (if needed)
 # -------------------------------------------------------------------------
 for col in ['Months School', 'Monthly Savings in School', 'Monthly Savings']:
     if col in participant_df.columns:
@@ -221,7 +224,7 @@ for _, row in participant_df.iterrows():
     for record in row["Net Worth Over Time"]:
         expanded_rows.append({
             "Name": row["Name"],
-            "profession": row["profession"],  # From participant data (properly capitalized)
+            "profession": row["profession"],  # Use the participant's value (capitalized)
             "Month": record["Month"],
             "Savings Balance": record["Accrued Savings"],
             "Loan Balance": record["Loan Value"],
