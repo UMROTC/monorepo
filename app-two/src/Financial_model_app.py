@@ -201,22 +201,31 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
             })
         return default_financials
 
-           # 6) Compute monthly accrued savings using the correct timing:
+              # 6) Compute monthly accrued savings using the correct timing:
     accrued_savings = []
     for m in range(1, total_months + 1):
-        if m <= months_school:
-            # In-school period: use only monthly_in_school_savings (no compounding)
+        if months_school > 0 and m <= months_school:
+            # In-school period: add only the in-school savings (no compounding)
             if m == 1:
                 current_savings = monthly_in_school_savings
             else:
-                current_savings = accrued_savings[-1] + monthly_in_school_savings
+                # Guard: if somehow accrued_savings is empty, use 0 as previous value.
+                previous = accrued_savings[-1] if accrued_savings else 0
+                current_savings = previous + monthly_in_school_savings
             print(f"Month {m}: IN-SCHOOL. Added {monthly_in_school_savings}; Total Savings: {current_savings}")
         else:
-            # Post-school period: compound previous savings and add monthly_post_school_savings
-            if m == months_school + 1:
-                current_savings = accrued_savings[-1] * (1 + monthly_rate) + monthly_post_school_savings
+            # Post-school period: compound previous savings and add post-school savings.
+            if m == 1:
+                # This should occur only if months_school is 0.
+                current_savings = monthly_post_school_savings
             else:
-                current_savings = accrued_savings[-1] * (1 + monthly_rate) + monthly_post_school_savings
+                # Guard: if accrued_savings is unexpectedly empty, log a warning and use 0.
+                if not accrued_savings:
+                    print(f"[WARNING] No previous savings found at month {m}. Using 0 as prior savings.")
+                    previous = 0
+                else:
+                    previous = accrued_savings[-1]
+                current_savings = previous * (1 + monthly_rate) + monthly_post_school_savings
             print(f"Month {m}: POST-SCHOOL. Added {monthly_post_school_savings}; Total Savings: {current_savings}")
         accrued_savings.append(current_savings)
 
