@@ -118,21 +118,6 @@ for i, row in participant_df.iterrows():
 # 4. Calculate Monthly Net Worth
 # -------------------------------------------------------------------------
 def calculate_monthly_financials(row, skill_df, gi_bill_df):
-    """
-    For each participant, look up their profession in the appropriate financial data (skill_df or gi_bill_df)
-    to retrieve the following:
-      - Months School
-      - Monthly Savings in School
-      - Monthly Savings (post-school)
-    
-    Then compute the monthly accrued savings as follows:
-      - For months 1 to Months School: add the in-school savings (no compounding)
-      - Starting at Month (Months School + 1): compound the previous savings by the monthly rate (derived from 5% APR)
-        and add the post-school savings.
-    
-    Finally, the net worth for each month is the sum of the accrued savings and the corresponding monthly loan value.
-    The simulation is run for a total of 300 months (25 years).
-    """
     total_months = 300
     monthly_rate = (1 + 0.05) ** (1/12) - 1  # Approximately 0.00407 per month
 
@@ -143,11 +128,10 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
     else:
         loan_source = gi_bill_df.copy()
 
-    # 2) Save the original profession (for display) and standardize for lookup by stripping whitespace
+    # 2) Save the original profession (for display) and standardize for lookup (only stripping whitespace)
     original_profession = row.get("profession", "").strip()
-    # Standardize the columns in the financial data (preserve capitalization)
-    loan_source.columns = loan_source.columns.str.strip()
-    # For matching, we use the exact string (only stripping extra whitespace)
+    loan_source.columns = loan_source.columns.str.strip()  # Preserve capitalization
+    # For matching, we use the exact string after stripping extra whitespace
     profession = original_profession
 
     # 3) Filter the financial data by profession
@@ -166,9 +150,11 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
         return default_financials
     loan_row = subset.iloc[0]
 
-    # 4) Retrieve financial parameters from the financial data (not from participant data)
-    # These values should be stored in the CSV files.
+    # 4) Retrieve financial parameters from the financial data row
     try:
+        # For non-military participants, these values come from the CSV.
+        # For military participants, the in-school values still come from CSV,
+        # but the post-school savings will be overridden with participant data.
         months_school = int(loan_row.get("Months School", 0))
         monthly_in_school_savings = float(loan_row.get("Monthly Savings in School", 0.0))
         monthly_post_school_savings = float(loan_row.get("Monthly Savings", 0.0))
@@ -185,7 +171,16 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
             })
         return default_financials
 
-    # 5) Extract monthly loan values from the financial data row
+    # 5) For military participants, override the after-school savings value with the one from Participant Data.
+    if military_status.lower() != "no":
+        try:
+            # Override post-school savings with the value in the participant data.
+            monthly_post_school_savings = float(row.get("Monthly Savings", monthly_post_school_savings))
+        except Exception as e:
+            print(f"[DEBUG] Error reading participant after-school savings for profession '{profession}': {e}")
+            monthly_post_school_savings = 0.0
+
+    # 6) Extract monthly loan values from the financial data row
     try:
         loan_values = loan_row[[f"month {i}" for i in range(1, total_months + 1)]].astype(float).values
     except Exception as e:
@@ -201,7 +196,7 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
             })
         return default_financials
 
-              # 6) Compute monthly accrued savings using the correct timing:
+    # 7) Compute monthly accrued savings with the proper timing:
     accrued_savings = []
     for m in range(1, total_months + 1):
         if months_school > 0 and m <= months_school:
@@ -209,29 +204,19 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
             if m == 1:
                 current_savings = monthly_in_school_savings
             else:
-                # Guard: if somehow accrued_savings is empty, use 0 as previous value.
-                previous = accrued_savings[-1] if accrued_savings else 0
-                current_savings = previous + monthly_in_school_savings
+                current_savings = accrued_savings[-1] + monthly_in_school_savings
             print(f"Month {m}: IN-SCHOOL. Added {monthly_in_school_savings}; Total Savings: {current_savings}")
         else:
-            # Post-school period: compound previous savings and add post-school savings.
+            # Post-school period: compound previous savings and add post-school savings
             if m == 1:
-                # This should occur only if months_school is 0.
+                # This case occurs if months_school is 0.
                 current_savings = monthly_post_school_savings
             else:
-                # Guard: if accrued_savings is unexpectedly empty, log a warning and use 0.
-                if not accrued_savings:
-                    print(f"[WARNING] No previous savings found at month {m}. Using 0 as prior savings.")
-                    previous = 0
-                else:
-                    previous = accrued_savings[-1]
-                current_savings = previous * (1 + monthly_rate) + monthly_post_school_savings
+                current_savings = accrued_savings[-1] * (1 + monthly_rate) + monthly_post_school_savings
             print(f"Month {m}: POST-SCHOOL. Added {monthly_post_school_savings}; Total Savings: {current_savings}")
         accrued_savings.append(current_savings)
 
-
-
-    # 7) Compute monthly net worth as the sum of accrued savings and the corresponding loan value.
+    # 8) Compute monthly net worth as the sum of accrued savings and the corresponding loan value
     monthly_financials = []
     for m in range(1, total_months + 1):
         idx = m - 1
@@ -241,10 +226,11 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
             "Accrued Savings": accrued_savings[idx],
             "Loan Value": loan_values[idx],
             "Net Worth": net_worth,
-            "Profession": original_profession  # Preserve original capitalization
+            "Profession": original_profession  # Preserve original capitalization for display
         })
 
     return monthly_financials
+
 
 # Apply the calculation function to each participant (using participant_df)
 participant_df["Net Worth Over Time"] = participant_df.apply(
