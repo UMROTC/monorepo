@@ -236,6 +236,11 @@ for _, row in merged_data.iterrows():  # Iterate over merged_data, not row direc
 # Convert list of dictionaries into a DataFrame
 expanded_df = pd.DataFrame(expanded_rows)
 
+if expanded_rows:
+    print("Record keys:", expanded_rows[0].keys())
+else:
+    print("No records in expanded_rows!")
+
 # -------------------------------------------------------------------------
 # 8. Accounting-Style Label
 # -------------------------------------------------------------------------
