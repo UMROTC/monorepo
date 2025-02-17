@@ -386,31 +386,40 @@ def main():
     for cat, details in selected_lifestyle_choices.items():
         st.write(f"**{cat}:** {details['Choice']} - ${details['Cost']:,.2f}")
 
-    # Step 6: Submit
+    # Step 6: Submit Your Budget
     st.header("Step 6: Submit Your Budget")
     st.write(f"**Remaining Budget:** ${remaining_budget:,.2f}")
 
     gspread_client = authorize_gspread()
     SHEET_KEY = "1rgS_NxsZjDkPE07kEpuYxvwktyROXKUfYBk-4t9bkqA"
 
-
     if participant_name and Profession and remaining_budget == 0:
         submit = st.button("Submit")
         if submit:
-            # Build the DataFrame with all relevant fields
-            data = pd.DataFrame({
-                "Name": [participant_name],
-                "Profession": [Profession],
-                "Military Service": [selected_lifestyle_choices.get("Military Service", {}).get("Choice", "No")],
-                "Savings": [savings],
-                "Who Pays for College": [who_pays_for_college]
-            })
+            # Build the base dictionary of data
+            data_dict = {
+                "Name": participant_name,
+                "Profession": Profession,
+                "Military Service": selected_lifestyle_choices.get("Military Service", {}).get("Choice", "No"),
+                "Savings": savings,
+                "Who Pays for College": who_pays_for_college
+            }
+            # Add each lifestyle category (except ones already included) with their decision and cost.
+            for category, details in selected_lifestyle_choices.items():
+                # Skip if category is already included in base dictionary
+                if category in ["Military Service", "Savings", "Who Pays for College"]:
+                    continue
+                # Create two columns per category:
+                data_dict[f"{category} Decision"] = details.get("Choice", "N/A")
+                data_dict[f"{category} Cost"] = details.get("Cost", 0)
 
-            # Access the Google Sheet
+            # Convert dictionary to a DataFrame with a single row
+            data = pd.DataFrame([data_dict])
             worksheet = get_google_sheet(gspread_client, SHEET_KEY, "participant_data")
             save_participant_data(data, worksheet)
     else:
         st.info("Please complete all steps and ensure your budget is balanced before submitting.")
+
 
 # ----------------------------------------------------------------------------
 # 4. EXECUTE MAIN FUNCTION

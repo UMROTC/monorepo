@@ -402,3 +402,282 @@ except Exception as e:
 st.plotly_chart(fig)
 
 print("Script complete.")
+
+# -------------------------------------------------------------------------
+# 15. Generate a participant report for printing
+# -------------------------------------------------------------------------
+import streamlit as st
+import pandas as pd
+import numpy as np
+import plotly.express as px
+import os
+import json
+from pathlib import Path
+import gspread
+from google.oauth2.service_account import Credentials
+
+# -------------------------------------------------------------------------
+# 1. Google Permissions
+# -------------------------------------------------------------------------
+SHEET_KEY = "1rgS_NxsZjDkPE07kEpuYxvwktyROXKUfYBk-4t9bkqA"
+SHEET_NAME = "participant_data"
+CREDENTIALS_PATH = Path("C:/Users/Jack Helmsing/Documents/Helmsing Army Documents/Recruiting/gitignore/atomic-monument-448919-i5-8043c996fb0e.json")
+
+def authorize_gspread():
+    try:
+        creds = Credentials.from_service_account_file(
+            CREDENTIALS_PATH,
+            scopes=[
+                'https://www.googleapis.com/auth/spreadsheets',
+                'https://www.googleapis.com/auth/drive'
+            ]
+        )
+        client = gspread.authorize(creds)
+        return client
+    except Exception as e:
+        st.error(f"Error authorizing gspread client: {e}")
+        st.stop()
+
+def get_google_sheet(client, sheet_key, worksheet_name="participant_data"):
+    try:
+        sheet = client.open_by_key(sheet_key)
+        worksheet = sheet.worksheet(worksheet_name)
+        data = worksheet.get_all_records(expected_headers=worksheet.row_values(1))
+        return pd.DataFrame(data)
+    except gspread.SpreadsheetNotFound:
+        st.error("Google Sheet not found. Please check the SHEET_KEY.")
+        st.stop()
+    except gspread.WorksheetNotFound:
+        st.error(f"Worksheet '{worksheet_name}' not found in the Google Sheet.")
+        st.stop()
+    except Exception as e:
+        st.error(f"Error accessing Google Sheet: {e}")
+        st.stop()
+
+# -------------------------------------------------------------------------
+# 2. File Paths
+# -------------------------------------------------------------------------
+current_dir = Path(__file__).parent.resolve()
+repo_root = current_dir.parent.parent
+
+skillset_cost_worksheet_path = repo_root / 'app-one' / 'data' / 'input' / 'Skillset_cost_worksheet_CSV.csv'
+gi_bill_path = repo_root / 'app-two' / 'data' / 'input' / 'GI_Bill_Application.csv'
+
+try:
+    gi_bill_df = pd.read_csv(gi_bill_path)
+except FileNotFoundError as e:
+    print(f"GI Bill reference sheet not found: {e}")
+    exit()
+except Exception as e:
+    print(f"Error loading GI Bill reference sheet: {e}")
+    exit()
+
+output_csv_path = current_dir.parent / "data" / "output" / "financial_model_plot.csv"
+output_html_path = current_dir.parent / "data" / "output" / "plotly_bar_chart_race.html"
+
+# -------------------------------------------------------------------------
+# 3. Load Participant and Financial Data Separately (Approach 1)
+# -------------------------------------------------------------------------
+client = authorize_gspread()
+participant_df = get_google_sheet(client, SHEET_KEY, SHEET_NAME)
+if participant_df.empty:
+    st.warning("🚨 No participant data found! Please have participants fill out their surveys first.")
+    st.stop()
+
+try:
+    skill_df = pd.read_csv(skillset_cost_worksheet_path)
+except FileNotFoundError as e:
+    print(f"File not found: {e}")
+    exit()
+except Exception as e:
+    print(f"Error loading files: {e}")
+    exit()
+
+# Standardize column names by stripping extra whitespace (preserve capitalization)
+participant_df.columns = participant_df.columns.str.strip()
+skill_df.columns = skill_df.columns.str.strip()
+gi_bill_df.columns = gi_bill_df.columns.str.strip()
+
+print("Participant data columns:", participant_df.columns.tolist())
+print("Skillset cost worksheet columns:", skill_df.columns.tolist())
+print("GI Bill data columns:", gi_bill_df.columns.tolist())
+
+# (Assume the financial model calculation has already been applied to participant_df.)
+# For example:
+participant_df["Net Worth Over Time"] = participant_df.apply(
+    lambda row: calculate_monthly_financials(row, skill_df, gi_bill_df),
+    axis=1
+)
+
+# -------------------------------------------------------------------------
+# 4. Function to Generate a Pair Report
+# -------------------------------------------------------------------------
+def generate_pair_report(p_row, m_row):
+    """
+    Generates an HTML report comparing the financial model of a participant and their -mil counterpart.
+    The report includes:
+      - Top-right financial details from the Skillset Cost Worksheet (Profession, Average Salary, Years of School, Savings During School)
+      - Two side-by-side tables showing each participant's lifestyle decisions and monthly lifestyle cost (from participant data)
+      - A bar chart comparing net worth at 20 years (month 240) for the pair
+    """
+    # Retrieve common financial details from the Skillset Cost Worksheet for the profession.
+    profession = p_row.get("profession", "").strip()
+    skill_subset = skill_df[skill_df["profession"].str.strip() == profession]
+    if skill_subset.empty:
+        common_info = {"Profession": "N/A", "Average Salary": "N/A", "Years of School": 0, "Savings During School": "N/A"}
+    else:
+        fin_row = skill_subset.iloc[0]
+        try:
+            months_school_val = int(fin_row.get("Months School", 0))
+        except Exception:
+            months_school_val = 0
+        common_info = {
+            "Profession": fin_row.get("profession", "N/A"),
+            "Average Salary": fin_row.get("Average Salary", "N/A"),
+            "Years of School": float(months_school_val) / 12.0 if months_school_val else 0,
+            "Savings During School": fin_row.get("Monthly Savings in School", "N/A")
+        }
+
+    # Retrieve lifestyle details from participant data
+    p_lifestyle = {
+        "Lifestyle Decisions": p_row.get("Lifestyle Decisions", "N/A"),
+        "Lifestyle Cost": p_row.get("Lifestyle Cost", "N/A")
+    }
+    m_lifestyle = {
+        "Lifestyle Decisions": m_row.get("Lifestyle Decisions", "N/A"),
+        "Lifestyle Cost": m_row.get("Lifestyle Cost", "N/A")
+    }
+
+    # Extract net worth at 20 years (month 240) for both participants
+    def get_networth_20(row):
+        nw_list = row.get("Net Worth Over Time", [])
+        if len(nw_list) >= 240:
+            return nw_list[239]["Net Worth"]
+        return None
+    p_networth_20 = get_networth_20(p_row)
+    m_networth_20 = get_networth_20(m_row)
+
+    # Build a bar chart comparing net worth at 20 years
+    chart_data = {"Name": [], "Net Worth": []}
+    if p_networth_20 is not None:
+        chart_data["Name"].append(p_row.get("Name", ""))
+        chart_data["Net Worth"].append(p_networth_20)
+    if m_networth_20 is not None:
+        chart_data["Name"].append(m_row.get("Name", ""))
+        chart_data["Net Worth"].append(m_networth_20)
+    chart_df = pd.DataFrame(chart_data)
+    chart_fig = px.bar(
+        chart_df,
+        x="Name",
+        y="Net Worth",
+        title="Net Worth Comparison at 20 Years",
+        labels={"Net Worth": "Net Worth ($)", "Name": "Participant"}
+    )
+    chart_html = chart_fig.to_html(full_html=False, include_plotlyjs='cdn')
+
+    # Build the HTML report with a top-right details box and side-by-side tables for lifestyle info.
+    report_html = f"""
+    <html>
+      <head>
+        <title>Financial Report: {p_row.get("Name", "")} vs. {m_row.get("Name", "")}</title>
+        <style>
+          body {{
+            font-family: Arial, sans-serif;
+            margin: 20px;
+          }}
+          .top-right {{
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background-color: #f9f9f9;
+            width: 300px;
+          }}
+          .lifestyle-tables {{
+            display: flex;
+            justify-content: space-between;
+            margin-top: 200px;
+          }}
+          table {{
+            border-collapse: collapse;
+            width: 45%;
+          }}
+          table, th, td {{
+            border: 1px solid #ccc;
+          }}
+          th, td {{
+            padding: 8px;
+            text-align: left;
+          }}
+          .chart-container {{
+            margin-top: 50px;
+            text-align: center;
+          }}
+        </style>
+      </head>
+      <body>
+        <div class="top-right">
+          <h2>Financial Details</h2>
+          <p><strong>Profession:</strong> {common_info.get("Profession", "N/A")}</p>
+          <p><strong>Average Salary:</strong> {common_info.get("Average Salary", "N/A")}</p>
+          <p><strong>Years of School:</strong> {common_info.get("Years of School", 0):.1f}</p>
+          <p><strong>Savings During School:</strong> {common_info.get("Savings During School", "N/A")}</p>
+        </div>
+        <h1>Comparison Report: {p_row.get("Name", "")} vs. {m_row.get("Name", "")}</h1>
+        <div class="lifestyle-tables">
+          <div>
+            <h3>{p_row.get("Name", "")}'s Lifestyle</h3>
+            <table>
+              <tr><th>Lifestyle Decisions</th><th>Monthly Cost</th></tr>
+              <tr>
+                <td>{p_lifestyle.get("Lifestyle Decisions", "N/A")}</td>
+                <td>{p_lifestyle.get("Lifestyle Cost", "N/A")}</td>
+              </tr>
+            </table>
+          </div>
+          <div>
+            <h3>{m_row.get("Name", "")}'s Lifestyle</h3>
+            <table>
+              <tr><th>Lifestyle Decisions</th><th>Monthly Cost</th></tr>
+              <tr>
+                <td>{m_lifestyle.get("Lifestyle Decisions", "N/A")}</td>
+                <td>{m_lifestyle.get("Lifestyle Cost", "N/A")}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        <div class="chart-container">
+          <h3>Net Worth Comparison at 20 Years</h3>
+          {chart_html}
+        </div>
+      </body>
+    </html>
+    """
+    return report_html
+
+# -------------------------------------------------------------------------
+# 5. Generate Reports for Every Participant Pair
+# -------------------------------------------------------------------------
+# We'll loop through participant_df and for each participant whose name does not end with "-mil",
+# we look for a corresponding "-mil" entry.
+for index, row in participant_df.iterrows():
+    name = row.get("Name", "").strip()
+    # Skip if this row is already a military entry.
+    if name.endswith("-mil"):
+        continue
+    mil_name = name + "-mil"
+    mil_rows = participant_df[participant_df["Name"].str.strip() == mil_name]
+    if mil_rows.empty:
+        print(f"No military counterpart found for {name}. Skipping report generation.")
+        continue
+    mil_row = mil_rows.iloc[0]
+    report_html = generate_pair_report(row, mil_row)
+    if report_html:
+        report_filename = f"report_{name}.html"
+        report_path = current_dir / report_filename
+        with open(report_path, "w", encoding="utf-8") as f:
+            f.write(report_html)
+        print(f"Report generated for {name} and {mil_name}: {report_path}")
+
+
