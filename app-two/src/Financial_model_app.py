@@ -220,7 +220,7 @@ print("Merged columns:", merged_data.columns.tolist())
 # 6. Add Net Worth Column
 # -------------------------------------------------------------------------
 merged_data["Net Worth Over Time"] = merged_data.apply(
-    lambda row: calculate_monthly_financials(row, skill_df, gi_bill_df), axis=1
+lambda row: calculate_monthly_financials(row, skill_df, gi_bill_df), axis=1
 )
 
 # -------------------------------------------------------------------------
