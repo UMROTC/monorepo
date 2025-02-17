@@ -94,14 +94,13 @@ except Exception as e:
 # Standardize column names by stripping whitespace (preserve capitalization)
 participant_df.columns = participant_df.columns.str.strip()
 skill_df.columns = skill_df.columns.str.strip()
-# (gi_bill_df remains as loaded; ensure its headers are also properly stripped if necessary)
 gi_bill_df.columns = gi_bill_df.columns.str.strip()
 
 print("Participant data columns:", participant_df.columns.tolist())
 print("Skillset cost worksheet columns:", skill_df.columns.tolist())
 print("GI Bill data columns:", gi_bill_df.columns.tolist())
 
-# Optional debug loop to check each participant's profession in the appropriate financial data:
+# Optional debug loop: Check if each participant's profession exists in the appropriate financial data
 for i, row in participant_df.iterrows():
     ms = str(row.get("Military Service", "")).strip()
     if ms.lower() == "no":
@@ -115,40 +114,43 @@ for i, row in participant_df.iterrows():
         print(f"[DEBUG] Row={i}, Name='{row.get('Name')}', profession='{row.get('profession')}'"
               f" => NOT FOUND in {'skill_df' if ms.lower()=='no' else 'gi_bill_df'}")
 
-# Debug: Print out "Months School" for each participant
-for index, row in participant_df.iterrows():
-    months_school = row.get("Months School", "N/A")
-    profession = row.get("profession", "N/A")
-    name = row.get("Name", "N/A")
-    print(f"Participant: {name} | Profession: {profession} | Months School: {months_school}")
-
 # -------------------------------------------------------------------------
 # 4. Calculate Monthly Net Worth
 # -------------------------------------------------------------------------
 def calculate_monthly_financials(row, skill_df, gi_bill_df):
+    """
+    For each participant, look up their profession in the appropriate financial data (skill_df or gi_bill_df)
+    to retrieve the following:
+      - Months School
+      - Monthly Savings in School
+      - Monthly Savings (post-school)
+    
+    Then compute the monthly accrued savings as follows:
+      - For months 1 to Months School: add the in-school savings (no compounding)
+      - Starting at Month (Months School + 1): compound the previous savings by the monthly rate (derived from 5% APR)
+        and add the post-school savings.
+    
+    Finally, the net worth for each month is the sum of the accrued savings and the corresponding monthly loan value.
+    The simulation is run for a total of 300 months (25 years).
+    """
     total_months = 300
-    monthly_rate = (1 + 0.05) ** (1/12) - 1  # ~0.00407 for 5% APR
+    monthly_rate = (1 + 0.05) ** (1/12) - 1  # Approximately 0.00407 per month
 
-    # 1) Pull participant's data
-    months_school = int(row.get("Months School", 0))
-    monthly_in_school_savings = float(row.get("Monthly Savings in School", 0.0))
-    monthly_post_school_savings = float(row.get("Monthly Savings", 0.0))
-
-    # 2) Decide which loan data to use based on Military Service
+    # 1) Decide which financial data to use based on Military Service
     military_status = str(row.get("Military Service", "")).strip()
     if military_status.lower() == "no":
         loan_source = skill_df.copy()
     else:
         loan_source = gi_bill_df.copy()
 
-    # 3) Save the original profession (for display) and standardize for lookup
+    # 2) Save the original profession (for display) and standardize for lookup by stripping whitespace
     original_profession = row.get("profession", "").strip()
-    # Standardize loan_source columns by stripping whitespace (do not change case)
+    # Standardize the columns in the financial data (preserve capitalization)
     loan_source.columns = loan_source.columns.str.strip()
-    # Create a standardized version for matching (without changing capitalization)
+    # For matching, we use the exact string (only stripping extra whitespace)
     profession = original_profession
 
-    # 4) Filter the loan_source by the standardized profession
+    # 3) Filter the financial data by profession
     subset = loan_source.loc[loan_source["profession"].str.strip() == profession]
     if subset.empty:
         print(f"[DEBUG] Profession '{profession}' not found in the selected loan source.")
@@ -164,7 +166,26 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
         return default_financials
     loan_row = subset.iloc[0]
 
-    # 5) Extract monthly loan values
+    # 4) Retrieve financial parameters from the financial data (not from participant data)
+    # These values should be stored in the CSV files.
+    try:
+        months_school = int(loan_row.get("Months School", 0))
+        monthly_in_school_savings = float(loan_row.get("Monthly Savings in School", 0.0))
+        monthly_post_school_savings = float(loan_row.get("Monthly Savings", 0.0))
+    except Exception as e:
+        print(f"[DEBUG] Error reading financial parameters for profession '{profession}': {e}")
+        default_financials = []
+        for m in range(1, total_months + 1):
+            default_financials.append({
+                "Month": m,
+                "Accrued Savings": 0,
+                "Loan Value": 0,
+                "Net Worth": 0,
+                "Profession": original_profession
+            })
+        return default_financials
+
+    # 5) Extract monthly loan values from the financial data row
     try:
         loan_values = loan_row[[f"month {i}" for i in range(1, total_months + 1)]].astype(float).values
     except Exception as e:
@@ -180,22 +201,26 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
             })
         return default_financials
 
-    # 6) Compute monthly accrued savings
+    # 6) Compute monthly accrued savings using the correct timing:
+    #    - For months 1 through months_school: add only monthly_in_school_savings (no interest)
+    #    - Starting at month (months_school + 1): compound the previous savings and add monthly_post_school_savings.
     accrued_savings = []
     for m in range(1, total_months + 1):
-        if m == 1:
-            current_savings = monthly_in_school_savings if months_school >= 1 else monthly_post_school_savings
-        else:
-            prev_savings = accrued_savings[-1]
-            if m <= months_school:
-                current_savings = prev_savings + monthly_in_school_savings
-            elif m == (months_school + 1):
-                current_savings = prev_savings * (1 + monthly_rate) + monthly_post_school_savings
+        if m <= months_school:
+            # In-school period: add in-school savings linearly.
+            if m == 1:
+                current_savings = monthly_in_school_savings
             else:
-                current_savings = prev_savings * (1 + monthly_rate) + monthly_post_school_savings
+                current_savings = accrued_savings[-1] + monthly_in_school_savings
+        else:
+            # Post-school period: compound previous savings and add post-school savings.
+            if m == months_school + 1:
+                current_savings = accrued_savings[-1] * (1 + monthly_rate) + monthly_post_school_savings
+            else:
+                current_savings = accrued_savings[-1] * (1 + monthly_rate) + monthly_post_school_savings
         accrued_savings.append(current_savings)
 
-    # 7) Compute monthly net worth and include the properly capitalized profession for output
+    # 7) Compute monthly net worth as the sum of accrued savings and the corresponding loan value.
     monthly_financials = []
     for m in range(1, total_months + 1):
         idx = m - 1
@@ -205,51 +230,51 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
             "Accrued Savings": accrued_savings[idx],
             "Loan Value": loan_values[idx],
             "Net Worth": net_worth,
-            "Profession": original_profession  # Preserve original capitalization for display
+            "Profession": original_profession  # Preserve original capitalization
         })
 
     return monthly_financials
 
-# Apply the calculation function to participant data (no merging with financial data)
+# Apply the calculation function to each participant (using participant_df)
 participant_df["Net Worth Over Time"] = participant_df.apply(
     lambda row: calculate_monthly_financials(row, skill_df, gi_bill_df),
     axis=1
 )
 
 # -------------------------------------------------------------------------
-# 5. Fill Missing Columns in participant_df (if needed)
+# 5. (Optional) Fill Missing Columns in participant_df if needed
 # -------------------------------------------------------------------------
 for col in ['Months School', 'Monthly Savings in School', 'Monthly Savings']:
     if col in participant_df.columns:
         participant_df[col] = participant_df[col].fillna(0)
 
 # -------------------------------------------------------------------------
-# 7. Expand to Long Format
+# 7. Expand to Long Format for Plotting and CSV output
 # -------------------------------------------------------------------------
 expanded_rows = []
 for _, row in participant_df.iterrows():
     for record in row["Net Worth Over Time"]:
         expanded_rows.append({
             "Name": row["Name"],
-            "profession": row["profession"],  # Use the participant's value (capitalized)
+            "profession": row["profession"],  # Participant's profession (capitalized)
             "Month": record["Month"],
             "Savings Balance": record["Accrued Savings"],
             "Loan Balance": record["Loan Value"],
             "Net Worth": record["Net Worth"],
-            "ProfessionDisplay": record["Profession"]  # For display purposes
+            "ProfessionDisplay": record["Profession"]
         })
 
 expanded_df = pd.DataFrame(expanded_rows)
 
 # -------------------------------------------------------------------------
-# 8. Accounting-Style Label
+# 8. Accounting-Style Label for Net Worth
 # -------------------------------------------------------------------------
 expanded_df['Net Worth Label'] = expanded_df['Net Worth'].apply(
     lambda x: f"(${abs(x):,.2f})" if x < 0 else f"${x:,.2f}"
 )
 
 # -------------------------------------------------------------------------
-# 9. Save to CSV
+# 9. Save Expanded Data to CSV
 # -------------------------------------------------------------------------
 try:
     expanded_df.to_csv(output_csv_path, index=False)
@@ -258,14 +283,14 @@ except Exception as e:
     print("Error saving CSV:", e)
 
 # -------------------------------------------------------------------------
-# 10. Create Bar Chart Figure
+# 10. Create Animated Bar Chart Figure using Plotly
 # -------------------------------------------------------------------------
 fig = px.bar(
     expanded_df,
     x="Net Worth",
     y="Name",
     orientation="h",
-    color="profession",  # Color by career/profession
+    color="profession",  # Use the capitalized profession for color grouping
     animation_frame="Month",
     text="Net Worth Label",
     title="Net Worth Over 25 Years - Yearly Slider & Pause Fix",
@@ -285,7 +310,7 @@ fig.layout.sliders = []
 fig.layout.updatemenus = []
 
 # -------------------------------------------------------------------------
-# 11. Define Slider Steps (Yearly)
+# 11. Define Custom Slider Steps (Yearly)
 # -------------------------------------------------------------------------
 slider_steps = []
 for year in range(1, 26):
@@ -338,7 +363,7 @@ play_pause_menu = dict(
 )
 
 # -------------------------------------------------------------------------
-# 13. Update Layout with Custom Slider & Buttons
+# 13. Update Figure Layout with Custom Slider & Buttons
 # -------------------------------------------------------------------------
 fig.update_layout(
     title=dict(
@@ -369,7 +394,7 @@ fig.update_layout(
 )
 
 # -------------------------------------------------------------------------
-# 14. Save & Show
+# 14. Save the Figure to HTML and Display it
 # -------------------------------------------------------------------------
 try:
     fig.write_html(output_html_path)
