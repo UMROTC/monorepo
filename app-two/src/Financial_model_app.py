@@ -142,33 +142,61 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
     monthly_in_school_savings = float(row.get("Monthly Savings in School", 0.0))
     monthly_post_school_savings = float(row.get("Monthly Savings", 0.0))
 
-    # 2) Decide which loan data to use based on Military Service
-    military_status = str(row.get("Military Service", "")).lower()
+    # 2) Decide which loan data to use based on military status
+    military_status = str(row.get("Military Service", "")).lower().strip()
     if military_status == "no":
-        loan_source = skill_df
+        loan_source = skill_df.copy()
     else:
-        loan_source = gi_bill_df
+        loan_source = gi_bill_df.copy()
+
+
+    # Ensure loan_source columns are standardized
+    loan_source.columns = loan_source.columns.str.lower().str.strip()
 
     # 3) Get and clean the participant's profession
     profession = str(row.get("profession", "")).lower().strip()
-    # Ensure the loan_source columns are also lowercased and stripped
-    loan_source.columns = loan_source.columns.str.lower().str.strip()
 
-    # 4) Filter the loan_source by the profession
+ # Standardize the column names and the profession value for comparison
+    loan_source.columns = loan_source.columns.str.lower().str.strip()
+    profession = str(row.get("profession", "")).lower().strip()
+    
+    # 4) Filter the loan_source for the profession
     subset = loan_source.loc[loan_source["profession"] == profession]
     if subset.empty:
         print(f"[DEBUG] Profession '{profession}' not found in the selected loan source.")
-        return []  # or return default values if desired
+        # Return a default financial model (e.g., zeros) instead of an empty list
+        default_financials = []
+        for m in range(1, total_months + 1):
+            default_financials.append({
+                "Month": m,
+                "Accrued Savings": 0,
+                "Loan Value": 0,
+                "Net Worth": 0
+            })
+        return default_financials
+
     loan_row = subset.iloc[0]
 
     # 5) Extract monthly loan values
-    loan_values = loan_row[[f"month {i}" for i in range(1, total_months + 1)]].astype(float).values
+    try:
+        loan_values = loan_row[[f"month {i}" for i in range(1, total_months + 1)]].astype(float).values
+    except Exception as e:
+        print(f"[DEBUG] Error extracting loan values for profession '{profession}': {e}")
+        # Return default values if extraction fails
+        default_financials = []
+        for m in range(1, total_months + 1):
+            default_financials.append({
+                "Month": m,
+                "Accrued Savings": 0,
+                "Loan Value": 0,
+                "Net Worth": 0
+            })
+        return default_financials
 
-    # 6) Accumulate savings each month
+    # 6) Compute monthly accrued savings
     accrued_savings = []
     for m in range(1, total_months + 1):
         if m == 1:
-            # First month: in school or post-school savings
             if months_school >= 1:
                 current_savings = monthly_in_school_savings
             else:
@@ -183,7 +211,7 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
                 current_savings = prev_savings * (1 + monthly_rate) + monthly_post_school_savings
         accrued_savings.append(current_savings)
 
-    # 7) Compute Net Worth for each month
+    # 7) Compute monthly net worth
     monthly_financials = []
     for m in range(1, total_months + 1):
         idx = m - 1
