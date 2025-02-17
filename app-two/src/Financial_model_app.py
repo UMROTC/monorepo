@@ -129,6 +129,10 @@ for i, row in merged_data.iterrows():
 # If the debug prints show any missing profession, fix them in your CSVs or participant data
 # so that 'skill_df' or 'gi_bill_df' has the same exact 'profession'.
 
+def calculate_monthly_financials(row, skill_df, gi_bill_df):
+    total_months = 300
+    monthly_rate = (1 + 0.05) ** (1/12) - 1  # ~0.00407 for 5% APR
+    
 # -- Only now call .apply(...) once we fix or confirm no missing rows --
 merged_data["Net Worth Over Time"] = merged_data.apply(
     lambda row: calculate_monthly_financials(row, skill_df, gi_bill_df),
