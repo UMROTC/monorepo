@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -21,10 +20,13 @@ def authorize_gspread():
     Authorize gspread client with loaded credentials.
     """
     try:
-        creds = Credentials.from_service_account_file(CREDENTIALS_PATH, scopes=[
-            'https://www.googleapis.com/auth/spreadsheets',
-            'https://www.googleapis.com/auth/drive'
-        ])
+        creds = Credentials.from_service_account_file(
+            CREDENTIALS_PATH,
+            scopes=[
+                'https://www.googleapis.com/auth/spreadsheets',
+                'https://www.googleapis.com/auth/drive'
+            ]
+        )
         client = gspread.authorize(creds)
         return client
     except Exception as e:
@@ -53,15 +55,10 @@ def get_google_sheet(client, sheet_key, worksheet_name="participant_data"):
 # -------------------------------------------------------------------------
 # 2. File Paths
 # -------------------------------------------------------------------------
-# Get the current script's directory (app-two/src/)
 current_dir = Path(__file__).parent.resolve()
-
-# Define the monorepo root directory (two levels up from app-two/src/)
 repo_root = current_dir.parent.parent
 
-# Define paths to App Two's input CSVs
 skillset_cost_worksheet_path = repo_root / 'app-one' / 'data' / 'input' / 'Skillset_cost_worksheet_CSV.csv'
-# Load GI Bill Reduction data
 gi_bill_path = repo_root / 'app-two' / 'data' / 'input' / 'GI_Bill_Application.csv'
 
 try:
@@ -73,23 +70,18 @@ except Exception as e:
     print(f"Error loading GI Bill reference sheet: {e}")
     exit()
 
-# Define Paths to App Two's output CSVs
 output_csv_path = current_dir.parent / "data" / "output" / "financial_model_plot.csv"
 output_html_path = current_dir.parent / "data" / "output" / "plotly_bar_chart_race.html"
 
 # -------------------------------------------------------------------------
-# 3. Load & Merge
+# 3. Load Participant and Financial Data Separately (Approach 1)
 # -------------------------------------------------------------------------
-# Load data from google sheet
 client = authorize_gspread()
 participant_df = get_google_sheet(client, SHEET_KEY, SHEET_NAME)
-
-# Check if DataFrame is empty before processing
 if participant_df.empty:
     st.warning("🚨 No participant data found! Please have participants fill out their surveys first.")
     st.stop()
-    
-# Load data from local files
+
 try:
     skill_df = pd.read_csv(skillset_cost_worksheet_path)
 except FileNotFoundError as e:
@@ -99,40 +91,28 @@ except Exception as e:
     print(f"Error loading files: {e}")
     exit()
 
-# Remove extra spaces in column names
+# Standardize column names (remove extra spaces)
 participant_df.columns = participant_df.columns.str.strip()
 skill_df.columns = skill_df.columns.str.strip()
 
-# Merge on 'Career' (participant_df) vs 'profession' (skill_df)
-merged_data = participant_df.merge(skill_df, on="profession", how="left") \
-.merge(gi_bill_df, on="profession", how="left")
+# (We do NOT merge the financial data with the participant data here.)
+print("Participant data columns:", participant_df.columns.tolist())
+print("Skillset cost worksheet columns:", skill_df.columns.tolist())
+print("GI Bill data columns:", gi_bill_df.columns.tolist())
 
-print("Merged columns:", merged_data.columns.tolist())
-
-# -- Single debug loop to detect any missing profession row --
-for i, row in merged_data.iterrows():
+# Optional debug loop to check if each participant's profession exists in the correct source:
+for i, row in participant_df.iterrows():
     ms = str(row.get("Military Service", "")).lower().strip()
     if ms == "no":
         loan_source = skill_df
     else:
         loan_source = gi_bill_df
-
     prof = str(row.get("profession", "")).lower().strip()
-
-    matching = loan_source.loc[
-        loan_source["profession"].str.lower().str.strip() == prof
-    ]
+    matching = loan_source.loc[loan_source["profession"].str.lower().str.strip() == prof]
     if matching.empty:
         print(f"[DEBUG] Row={i}, Name='{row.get('Name')}', profession='{row.get('profession')}'"
               f" => NOT FOUND in {'skill_df' if ms=='no' else 'gi_bill_df'}")
 
-# If the debug prints show any missing profession, fix them in your CSVs or participant data
-# so that 'skill_df' or 'gi_bill_df' has the same exact 'profession'.
-
-
-# -------------------------------------------------------------------------
-# 4. Calculate Monthly Net Worth
-# -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
 # 4. Calculate Monthly Net Worth
 # -------------------------------------------------------------------------
@@ -154,9 +134,7 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
 
     # 3) Save the original profession (for display) and standardize for lookup
     original_profession = row.get("profession", "")
-    # Standardize loan_source columns
     loan_source.columns = loan_source.columns.str.lower().str.strip()
-    # Create a standardized version for matching
     profession = original_profession.lower().strip()
 
     # 4) Filter the loan_source by the standardized profession
@@ -196,10 +174,7 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
     accrued_savings = []
     for m in range(1, total_months + 1):
         if m == 1:
-            if months_school >= 1:
-                current_savings = monthly_in_school_savings
-            else:
-                current_savings = monthly_post_school_savings
+            current_savings = monthly_in_school_savings if months_school >= 1 else monthly_post_school_savings
         else:
             prev_savings = accrued_savings[-1]
             if m <= months_school:
@@ -220,52 +195,41 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
             "Accrued Savings": accrued_savings[idx],
             "Loan Value": loan_values[idx],
             "Net Worth": net_worth,
-            "Profession": original_profession  # Keep the original for display
+            "Profession": original_profession  # Preserve original capitalization for display
         })
 
     return monthly_financials
 
-
-
-# -- Only now call .apply(...) once we fix or confirm no missing rows --
-merged_data["Net Worth Over Time"] = merged_data.apply(
+# Apply the calculation function to participant data (no merge needed)
+participant_df["Net Worth Over Time"] = participant_df.apply(
     lambda row: calculate_monthly_financials(row, skill_df, gi_bill_df),
     axis=1
 )
+
 # -------------------------------------------------------------------------
-# 5. Fill Missing Columns
+# 5. Fill Missing Columns (if needed in participant_df)
 # -------------------------------------------------------------------------
 for col in ['Months School', 'Monthly Savings in School', 'Monthly Savings']:
-    if col in merged_data.columns:
-        merged_data[col] = merged_data[col].fillna(0)
-
-for i in range(1, 301):
-    c_name = f"month {i}"
-    if c_name in merged_data.columns:
-        merged_data[c_name] = merged_data[c_name].fillna(0)
-
-print("Merged columns:", merged_data.columns.tolist())
-
+    if col in participant_df.columns:
+        participant_df[col] = participant_df[col].fillna(0)
 
 # -------------------------------------------------------------------------
 # 7. Expand to Long Format
 # -------------------------------------------------------------------------
 expanded_rows = []
-for _, row in merged_data.iterrows():
+for _, row in participant_df.iterrows():
     for record in row["Net Worth Over Time"]:
         expanded_rows.append({
             "Name": row["Name"],
-            "profession": row["profession"],  # From the participant data (properly capitalized)
+            "profession": row["profession"],  # From participant data (properly capitalized)
             "Month": record["Month"],
             "Savings Balance": record["Accrued Savings"],
             "Loan Balance": record["Loan Value"],
             "Net Worth": record["Net Worth"],
-            "ProfessionDisplay": record["Profession"]  # Optional: for display purposes
+            "ProfessionDisplay": record["Profession"]  # For display purposes
         })
 
-# Convert list of dictionaries into a DataFrame
 expanded_df = pd.DataFrame(expanded_rows)
-
 
 # -------------------------------------------------------------------------
 # 8. Accounting-Style Label
@@ -300,7 +264,7 @@ fig = px.bar(
         "Name": "Participants",
         "profession": "Career"
     },
-    color_discrete_sequence=px.colors.qualitative.Set2  # Optional
+    color_discrete_sequence=px.colors.qualitative.Set2
 )
 fig.update_traces(textposition="outside", cliponaxis=False)
 
@@ -314,26 +278,22 @@ fig.layout.updatemenus = []
 # 11. Define Slider Steps (Yearly)
 # -------------------------------------------------------------------------
 slider_steps = []
-for year in range(1, 26):  # 1..25 years
+for year in range(1, 26):
     final_month = year * 12
     slider_steps.append(dict(
         method="animate",
         label=f"Year {year}",
-        args=[[
-            f"{final_month}"],  # Target frame name
-            {
-                "mode": "immediate",
-                "frame": {"duration": 500, "redraw": True},
-                "transition": {"duration": 0},
-            }
-        ],
+        args=[[f"{final_month}"],
+              {"mode": "immediate",
+               "frame": {"duration": 500, "redraw": True},
+               "transition": {"duration": 0}}
+             ]
     ))
-
 custom_slider = dict(
     active=0,
     steps=slider_steps,
     x=0.1,
-    y=-0.3,  # Slider is now higher
+    y=-0.3,
     len=0.8,
     xanchor="left",
     yanchor="bottom",
@@ -348,17 +308,21 @@ play_pause_menu = dict(
     type="buttons",
     direction="left",
     x=0.1,
-    y=-0.4,  # Moved up
+    y=-0.4,
     buttons=[
         dict(
             label="Play",
             method="animate",
-            args=[None, {"frame": {"duration": 300, "redraw": True}, "transition": {"duration": 0}, "fromcurrent": True}],
+            args=[None, {"frame": {"duration": 300, "redraw": True},
+                         "transition": {"duration": 0},
+                         "fromcurrent": True}],
         ),
         dict(
             label="Pause",
             method="animate",
-            args=[[None], {"mode": "immediate", "frame": {"duration": 0, "redraw": False}, "transition": {"duration": 0}}],
+            args=[[None], {"mode": "immediate",
+                           "frame": {"duration": 0, "redraw": False},
+                           "transition": {"duration": 0}}],
         ),
     ]
 )
@@ -369,21 +333,21 @@ play_pause_menu = dict(
 fig.update_layout(
     title=dict(
         text="Net Worth Over Time",
-        x=0.5,  # Center title
-        y=0.95,  # Position it slightly higher
+        x=0.5,
+        y=0.95,
         xanchor="center",
         yanchor="top",
         font=dict(size=24, color="black")
-    ),    
-    font=dict(color='black'),  # Set all text to black
-    xaxis=dict(tickfont=dict(color='black')),  # Set x-axis text to black
-    yaxis=dict(tickfont=dict(color='black')),  # Set y-axis text to black
-    plot_bgcolor='white',  # Set background to white
-    paper_bgcolor='white',  # Ensure full figure background is white
+    ),
+    font=dict(color='black'),
+    xaxis=dict(tickfont=dict(color='black')),
+    yaxis=dict(tickfont=dict(color='black')),
+    plot_bgcolor='white',
+    paper_bgcolor='white',
     sliders=[custom_slider],
     updatemenus=[play_pause_menu],
-    margin=dict(l=50, r=50, t=50, b=200),  # Reduced bottom margin
-    height=900,  # 50% more vertical space
+    margin=dict(l=50, r=50, t=50, b=200),
+    height=900,
     legend=dict(
         title="Career",
         x=1.05,
@@ -403,6 +367,6 @@ try:
 except Exception as e:
     print("Error saving HTML file:", e)
 
-st.plotly_chart(fig) 
+st.plotly_chart(fig)
 
 print("Script complete.")
