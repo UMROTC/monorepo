@@ -198,7 +198,7 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
     return monthly_financials
 
 # -- Only now call .apply(...) once we fix or confirm no missing rows --
-    merged_data["Net Worth Over Time"] = merged_data.apply(
+merged_data["Net Worth Over Time"] = merged_data.apply(
     lambda row: calculate_monthly_financials(row, skill_df, gi_bill_df),
     axis=1
     )
@@ -216,12 +216,6 @@ for i in range(1, 301):
 
 print("Merged columns:", merged_data.columns.tolist())
 
-# -------------------------------------------------------------------------
-# 6. Add Net Worth Column
-# -------------------------------------------------------------------------
-merged_data["Net Worth Over Time"] = merged_data.apply(
-    lambda row: calculate_monthly_financials(row, skill_df, gi_bill_df), axis=1
-    )
 
 # -------------------------------------------------------------------------
 # 7. Expand to Long Format
