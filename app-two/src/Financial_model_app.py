@@ -107,6 +107,9 @@ skill_df.columns = skill_df.columns.str.strip()
 merged_data = participant_df.merge(skill_df, on="profession", how="left") \
 .merge(gi_bill_df, on="profession", how="left")
 
+print("Merged columns:", merged_data.columns.tolist())
+
+# -- Single debug loop to detect any missing profession row --
 for i, row in merged_data.iterrows():
     ms = str(row.get("Military Service", "")).lower().strip()
     if ms == "no":
@@ -115,12 +118,22 @@ for i, row in merged_data.iterrows():
         loan_source = gi_bill_df
 
     prof = str(row.get("profession", "")).lower().strip()
-    
-    # Find all matches for this profession
-    matching = loan_source.loc[loan_source["profession"].str.lower().str.strip() == prof]
-    if matching.empty:
-        print(f"Row {i}, Name={row.get('Name')}, Profession='{prof}' => NOT FOUND in {'skill_df' if ms=='no' else 'gi_bill_df'}")
 
+    matching = loan_source.loc[
+        loan_source["profession"].str.lower().str.strip() == prof
+    ]
+    if matching.empty:
+        print(f"[DEBUG] Row={i}, Name='{row.get('Name')}', profession='{row.get('profession')}'"
+              f" => NOT FOUND in {'skill_df' if ms=='no' else 'gi_bill_df'}")
+
+# If the debug prints show any missing profession, fix them in your CSVs or participant data
+# so that 'skill_df' or 'gi_bill_df' has the same exact 'profession'.
+
+# -- Only now call .apply(...) once we fix or confirm no missing rows --
+merged_data["Net Worth Over Time"] = merged_data.apply(
+    lambda row: calculate_monthly_financials(row, skill_df, gi_bill_df),
+    axis=1
+)
 # -------------------------------------------------------------------------
 # 4. Calculate Monthly Net Worth
 # -------------------------------------------------------------------------
@@ -209,39 +222,6 @@ print("Merged columns:", merged_data.columns.tolist())
 merged_data["Net Worth Over Time"] = merged_data.apply(
     lambda row: calculate_monthly_financials(row, skill_df, gi_bill_df), axis=1
 )
-for idx, each_row in merged_data.iterrows():
-    # Decide which loan_source
-    ms = str(each_row.get("Military Service", "")).lower().strip()
-    if ms == "no":
-        loan_source = skill_df
-    else:
-        loan_source = gi_bill_df
-
-    # Grab the participant's profession
-    prof = str(each_row.get("profession", "")).lower().strip()
-
-    # Attempt to locate that profession in loan_source
-    matching_rows = loan_source.loc[loan_source["profession"] == prof]
-
-    for i, participant_row in merged_data.iterrows():
-    # "Military Service" deciding factor
-        ms = str(participant_row.get("Military Service", "")).lower().strip()
-        if ms == "no":
-            loan_source = skill_df
-        else:
-            loan_source = gi_bill_df
-
-    # The participant's profession
-    prof = str(participant_row.get("profession", "")).lower().strip()
-
-    # Which rows in loan_source match this profession?
-    subset = loan_source.loc[loan_source["profession"].str.lower().str.strip() == prof]
-
-    if subset.empty:
-        print(f"Row {i} => Name={participant_row.get('Name')} "
-              f"profession='{prof}' => NOT FOUND in "
-              f"{'skill_df' if ms=='no' else 'gi_bill_df'}")
-
 
 # -------------------------------------------------------------------------
 # 7. Expand to Long Format
