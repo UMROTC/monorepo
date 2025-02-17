@@ -148,8 +148,16 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
         loan_source = skill_df
     else:
         loan_source = gi_bill_df
+    subset = loan_source.loc[loan_source["profession"] == profession]
+    if subset.empty:
+    # 3a) Identify correct row for the participant's profession
+    # Handle the missing profession appropriately.
+    # For instance, log a warning and return an empty list or default values.
+        print(f"[DEBUG] Profession '{profession}' not found in the selected loan source.")
+        return []  # or some default financials
+    loan_row = subset.iloc[0]
 
-    # 3) Identify correct row for the participant's profession
+    # 3b) Identify correct row for the participant's profession
     profession = str(row.get("profession", "")).lower().strip()
     loan_source.columns = loan_source.columns.str.lower().str.strip()
     loan_row = loan_source.loc[loan_source["profession"] == profession].iloc[0]
