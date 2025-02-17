@@ -133,6 +133,9 @@ for i, row in merged_data.iterrows():
 # -------------------------------------------------------------------------
 # 4. Calculate Monthly Net Worth
 # -------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+# 4. Calculate Monthly Net Worth
+# -------------------------------------------------------------------------
 def calculate_monthly_financials(row, skill_df, gi_bill_df):
     total_months = 300
     monthly_rate = (1 + 0.05) ** (1/12) - 1  # ~0.00407 for 5% APR
@@ -142,39 +145,35 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
     monthly_in_school_savings = float(row.get("Monthly Savings in School", 0.0))
     monthly_post_school_savings = float(row.get("Monthly Savings", 0.0))
 
-    # 2) Decide which loan data to use based on military status
+    # 2) Decide which loan data to use based on Military Service
     military_status = str(row.get("Military Service", "")).lower().strip()
     if military_status == "no":
         loan_source = skill_df.copy()
     else:
         loan_source = gi_bill_df.copy()
 
-
-    # Ensure loan_source columns are standardized
+    # 3) Save the original profession (for display) and standardize for lookup
+    original_profession = row.get("profession", "")
+    # Standardize loan_source columns
     loan_source.columns = loan_source.columns.str.lower().str.strip()
+    # Create a standardized version for matching
+    profession = original_profession.lower().strip()
 
-    # 3) Get and clean the participant's profession
-    profession = str(row.get("profession", "")).lower().strip()
-
- # Standardize the column names and the profession value for comparison
-    loan_source.columns = loan_source.columns.str.lower().str.strip()
-    profession = str(row.get("profession", "")).lower().strip()
-    
-    # 4) Filter the loan_source for the profession
+    # 4) Filter the loan_source by the standardized profession
     subset = loan_source.loc[loan_source["profession"] == profession]
     if subset.empty:
         print(f"[DEBUG] Profession '{profession}' not found in the selected loan source.")
-        # Return a default financial model (e.g., zeros) instead of an empty list
+        # Return default financials instead of an empty list
         default_financials = []
         for m in range(1, total_months + 1):
             default_financials.append({
                 "Month": m,
                 "Accrued Savings": 0,
                 "Loan Value": 0,
-                "Net Worth": 0
+                "Net Worth": 0,
+                "Profession": original_profession
             })
         return default_financials
-
     loan_row = subset.iloc[0]
 
     # 5) Extract monthly loan values
@@ -182,14 +181,14 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
         loan_values = loan_row[[f"month {i}" for i in range(1, total_months + 1)]].astype(float).values
     except Exception as e:
         print(f"[DEBUG] Error extracting loan values for profession '{profession}': {e}")
-        # Return default values if extraction fails
         default_financials = []
         for m in range(1, total_months + 1):
             default_financials.append({
                 "Month": m,
                 "Accrued Savings": 0,
                 "Loan Value": 0,
-                "Net Worth": 0
+                "Net Worth": 0,
+                "Profession": original_profession
             })
         return default_financials
 
@@ -211,7 +210,7 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
                 current_savings = prev_savings * (1 + monthly_rate) + monthly_post_school_savings
         accrued_savings.append(current_savings)
 
-    # 7) Compute monthly net worth
+    # 7) Compute monthly net worth and include the properly capitalized profession for output
     monthly_financials = []
     for m in range(1, total_months + 1):
         idx = m - 1
@@ -220,10 +219,12 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
             "Month": m,
             "Accrued Savings": accrued_savings[idx],
             "Loan Value": loan_values[idx],
-            "Net Worth": net_worth
+            "Net Worth": net_worth,
+            "Profession": original_profession  # Keep the original for display
         })
 
     return monthly_financials
+
 
 
 # -- Only now call .apply(...) once we fix or confirm no missing rows --
