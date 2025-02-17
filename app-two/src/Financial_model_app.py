@@ -130,11 +130,6 @@ for i, row in merged_data.iterrows():
 # so that 'skill_df' or 'gi_bill_df' has the same exact 'profession'.
 
 
-# -- Only now call .apply(...) once we fix or confirm no missing rows --
-merged_data["Net Worth Over Time"] = merged_data.apply(
-    lambda row: calculate_monthly_financials(row, skill_df, gi_bill_df),
-    axis=1
-)
 # -------------------------------------------------------------------------
 # 4. Calculate Monthly Net Worth
 # -------------------------------------------------------------------------
@@ -202,7 +197,11 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
 
     return monthly_financials
 
-
+# -- Only now call .apply(...) once we fix or confirm no missing rows --
+merged_data["Net Worth Over Time"] = merged_data.apply(
+    lambda row: calculate_monthly_financials(row, skill_df, gi_bill_df),
+    axis=1
+)
 # -------------------------------------------------------------------------
 # 5. Fill Missing Columns
 # -------------------------------------------------------------------------
