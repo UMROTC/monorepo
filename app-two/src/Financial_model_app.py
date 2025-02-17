@@ -201,24 +201,24 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
             })
         return default_financials
 
-    # 6) Compute monthly accrued savings using the correct timing:
-    #    - For months 1 through months_school: add only monthly_in_school_savings (no interest)
-    #    - Starting at month (months_school + 1): compound the previous savings and add monthly_post_school_savings.
+       # 6) Compute monthly accrued savings using the correct timing:
     accrued_savings = []
     for m in range(1, total_months + 1):
-        if m <= months_school:
-            # In-school period: add in-school savings linearly.
+        if months_school > 0 and m <= months_school:
+            # In-school period: add only the in-school savings linearly.
             if m == 1:
                 current_savings = monthly_in_school_savings
             else:
                 current_savings = accrued_savings[-1] + monthly_in_school_savings
         else:
-            # Post-school period: compound previous savings and add post-school savings.
-            if m == months_school + 1:
-                current_savings = accrued_savings[-1] * (1 + monthly_rate) + monthly_post_school_savings
+            # Post-school period: if m==1 (i.e. no in-school period), set initial savings;
+            # otherwise, compound previous savings and add post-school savings.
+            if m == 1:
+                current_savings = monthly_post_school_savings
             else:
                 current_savings = accrued_savings[-1] * (1 + monthly_rate) + monthly_post_school_savings
         accrued_savings.append(current_savings)
+
 
     # 7) Compute monthly net worth as the sum of accrued savings and the corresponding loan value.
     monthly_financials = []
