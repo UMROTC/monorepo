@@ -251,24 +251,21 @@ print("Merged columns:", merged_data.columns.tolist())
 # 7. Expand to Long Format
 # -------------------------------------------------------------------------
 expanded_rows = []
-for _, row in merged_data.iterrows():  # Iterate over merged_data, not row directly
+for _, row in merged_data.iterrows():
     for record in row["Net Worth Over Time"]:
         expanded_rows.append({
             "Name": row["Name"],
-            "profession": row["profession"],
+            "profession": row["profession"],  # From the participant data (properly capitalized)
             "Month": record["Month"],
             "Savings Balance": record["Accrued Savings"],
             "Loan Balance": record["Loan Value"],
-            "Net Worth": record["Net Worth"]
+            "Net Worth": record["Net Worth"],
+            "ProfessionDisplay": record["Profession"]  # Optional: for display purposes
         })
 
 # Convert list of dictionaries into a DataFrame
 expanded_df = pd.DataFrame(expanded_rows)
 
-if expanded_rows:
-    print("Record keys:", expanded_rows[0].keys())
-else:
-    print("No records in expanded_rows!")
 
 # -------------------------------------------------------------------------
 # 8. Accounting-Style Label
