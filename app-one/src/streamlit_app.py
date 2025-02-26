@@ -34,9 +34,12 @@ def load_credentials():
 
         service_account_json = st.secrets["gspread"]["service_account_key"]
 
-
         # If the JSON is stored as a string, parse it
-        credentials_dict = json.loads(service_account_json) if isinstance(service_account_json, str) else service_account_json
+        credentials_dict = (
+            json.loads(service_account_json)
+            if isinstance(service_account_json, str)
+            else service_account_json
+        )
 
         # Check if required keys exist
         required_keys = ["type", "project_id", "private_key", "client_email"]
@@ -46,10 +49,13 @@ def load_credentials():
                 st.stop()
 
         # Create credentials object
-        creds = Credentials.from_service_account_info(credentials_dict, scopes=[
-            'https://www.googleapis.com/auth/spreadsheets',
-            'https://www.googleapis.com/auth/drive'
-        ])
+        creds = Credentials.from_service_account_info(
+            credentials_dict,
+            scopes=[
+                'https://www.googleapis.com/auth/spreadsheets',
+                'https://www.googleapis.com/auth/drive'
+            ]
+        )
         return creds
 
     except KeyError as e:
@@ -69,8 +75,11 @@ def authorize_gspread():
     """
     creds = load_credentials()
     try:
-        scoped_creds = creds.with_scopes(['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'])
-        client = gspread.authorize(scoped_creds)  # Convert creds properly
+        scoped_creds = creds.with_scopes([
+            'https://www.googleapis.com/auth/spreadsheets',
+            'https://www.googleapis.com/auth/drive'
+        ])
+        client = gspread.authorize(scoped_creds)
         return client
     except Exception as e:
         st.error(f"Error authorizing gspread client: {e}")
@@ -162,7 +171,11 @@ def calculate_tax(income, tax_brackets):
     tax = 0
     for _, row in tax_brackets.iterrows():
         lower = row["Lower Bound"]
-        upper = row["Upper Bound"] if not pd.isna(row["Upper Bound"]) else float("inf")
+        upper = (
+            row["Upper Bound"]
+            if not pd.isna(row["Upper Bound"]) 
+            else float("inf")
+        )
         rate = row["Rate"]
         if income > lower:
             taxable = min(income, upper) - lower
@@ -185,10 +198,12 @@ def calculate_tax_by_status(income, marital_status, tax_data):
         total_tax (float): Total tax owed.
     """
     federal_brackets = tax_data[
-        (tax_data["Status"] == marital_status) & (tax_data["Type"] == "Federal")
+        (tax_data["Status"] == marital_status) 
+        & (tax_data["Type"] == "Federal")
     ]
     state_brackets = tax_data[
-        (tax_data["Status"] == marital_status) & (tax_data["Type"] == "State")
+        (tax_data["Status"] == marital_status) 
+        & (tax_data["Type"] == "State")
     ]
 
     if federal_brackets.empty or state_brackets.empty:
@@ -211,14 +226,12 @@ def save_participant_data(data_frame, worksheet):
         worksheet (gspread.Worksheet): The target worksheet.
     """
     try:
-        # Convert DataFrame to list of lists
         rows_to_add = data_frame.values.tolist()
         for row in rows_to_add:
             worksheet.append_row(row, value_input_option="RAW")
         st.success("Your budget has been submitted and saved to Google Sheets successfully!")
     except Exception as e:
         st.error(f"Failed to save participant data to Google Sheets: {e}")
-
 
 # ----------------------------------------------------------------------------
 # 3. MAIN APP LOGIC
@@ -227,6 +240,7 @@ def save_participant_data(data_frame, worksheet):
 def main():
     st.title("Budget Simulator")
         
+    # Load and cache data
     urls = setup_paths()
     tax_data = load_csv(urls["tax"])
     skillset_data = load_csv(urls["skillset"])
@@ -240,6 +254,8 @@ def main():
     st.header("Step 2: Choose Your Profession")
     Profession = st.selectbox("Select a Profession", skillset_data["Profession"])
     selected_Profession = skillset_data[skillset_data["Profession"] == Profession].iloc[0]
+
+    # If profession requires school, use "Savings During School"; otherwise "Average Salary"
     if selected_Profession["Requires School"].lower() == "yes":
         salary = selected_Profession["Savings During School"]
     else:
@@ -249,6 +265,7 @@ def main():
     st.header("Step 3: Choose Your Marital Status")
     marital_status = st.radio("Marital Status", ["Single", "Married"])
 
+    # Calculate taxes and net monthly income
     taxable_income, federal_tax, state_tax, total_tax = calculate_tax_by_status(
         salary, marital_status, tax_data
     )
@@ -267,12 +284,12 @@ def main():
     monthly_income_after_tax = (salary - federal_tax - state_tax) / 12
     st.write(f"**Monthly Income After Tax:** ${monthly_income_after_tax:,.2f}")
 
-    # Sidebar for remaining budget
+    # Sidebar for tracking remaining budget
     st.sidebar.header("Remaining Monthly Budget")
     remaining_budget_display = st.sidebar.empty()
     remaining_budget_message = st.sidebar.empty()
 
-    # Initialize variables
+    # Initialize budget calculation
     remaining_budget = monthly_income_after_tax
     expenses = 0
     savings = 0
@@ -281,7 +298,9 @@ def main():
     # Step 4: Military Service
     st.header("Step 4: Military Service")
     military_service_choice = st.selectbox(
-        "Choose your military service option", ["No", "Part Time", "Full Time"], key="Military_Service"
+        "Choose your military service option",
+        ["No", "Part Time", "Full Time"],
+        key="Military_Service"
     )
     selected_lifestyle_choices["Military Service"] = {"Choice": military_service_choice, "Cost": 0}
 
@@ -292,14 +311,16 @@ def main():
     # Step 5: Lifestyle Choices
     st.header("Step 5: Make Lifestyle Choices")
 
-    # Ensure `who_pays_for_college` is always defined
+    # Track "Who Pays for College" if needed
     who_pays_for_college = "Unknown"
 
     for category in lifestyle_data["Category"].unique():
         if category == "Savings":
-            continue
+            continue  # Skip "Savings" here; handled separately below
 
         options = lifestyle_data[lifestyle_data["Category"] == category]["Option"].tolist()
+
+        # Restrict "Military" options based on user choice
         if "Military" in options:
             if military_service_choice == "No":
                 options.remove("Military")
@@ -310,29 +331,25 @@ def main():
 
         choice = st.selectbox(f"Choose your {category.lower()}", options, key=f"{category}_choice")
 
-        # Check if cost exists before fetching it
-        cost_row = lifestyle_data[(lifestyle_data["Category"] == category) & (lifestyle_data["Option"] == choice)]
+        cost_row = lifestyle_data[
+            (lifestyle_data["Category"] == category) 
+            & (lifestyle_data["Option"] == choice)
+        ]
         if not cost_row.empty and "Monthly Cost" in cost_row:
             cost = float(cost_row["Monthly Cost"].values[0])
         else:
             cost = 0
 
-        # Ensure budget deduction
         remaining_budget -= cost
         expenses += cost
         selected_lifestyle_choices[category] = {"Choice": choice, "Cost": cost}
 
-        # **Ensure "Who Pays for College" is captured separately**
         if category == "Who Pays for College":
-            who_pays_for_college = choice  # Store separately for later use
+            who_pays_for_college = choice  # store separately if needed
 
     # Step 5b: Savings
     st.subheader("Savings")
-
-    # Fetch valid savings options once
     savings_options = lifestyle_data[lifestyle_data["Category"] == "Savings"]["Option"].tolist()
-
-    # Savings selection
     savings_choice = st.selectbox("Choose your savings option", savings_options, key="Savings_Choice")
 
     if savings_choice.lower() == "whatever is left":
@@ -344,33 +361,32 @@ def main():
                 (lifestyle_data["Category"] == "Savings") & (lifestyle_data["Option"] == savings_choice)
             ]["Percentage"].values[0]
 
-            if pd.notna(savings_percentage) and isinstance(savings_percentage, str) and "%" in savings_percentage:
+            if (
+                pd.notna(savings_percentage) 
+                and isinstance(savings_percentage, str) 
+                and "%" in savings_percentage
+            ):
                 savings_percentage = float(savings_percentage.strip("%")) / 100
                 savings = savings_percentage * monthly_income_after_tax
             else:
-                savings = 0  # Default to 0 if no percentage is found
-
+                savings = 0
         except IndexError:
             st.error(f"Savings percentage not found for choice: {savings_choice}")
             savings = 0
 
-        # Deduct savings from remaining budget safely
         if savings > remaining_budget:
             st.error(
                 f"Warning: Your savings choice exceeds your budget by "
                 f"${abs(remaining_budget - savings):,.2f}!"
             )
-            savings = remaining_budget  # Adjust to available budget
+            savings = remaining_budget
             remaining_budget = 0
         else:
             remaining_budget -= savings
-        
-        
 
-    # Store savings choice
     selected_lifestyle_choices["Savings"] = {"Choice": savings_choice, "Cost": savings}
 
-    # Update sidebar dynamically
+    # Update sidebar budget display
     remaining_budget_display.markdown(f"### Remaining Monthly Budget: ${remaining_budget:,.2f}")
     if remaining_budget > 0:
         remaining_budget_message.success(f"You have ${remaining_budget:,.2f} left.")
@@ -379,47 +395,54 @@ def main():
     else:
         remaining_budget_message.error(f"You have overspent by ${-remaining_budget:,.2f}!")
 
-
-
-    # Display a summary of all choices
+    # Summary of all choices
     st.subheader("Lifestyle Choices Summary")
     for cat, details in selected_lifestyle_choices.items():
         st.write(f"**{cat}:** {details['Choice']} - ${details['Cost']:,.2f}")
 
-    # Step 6: Submit Your Budget
+    # Step 6: Submit
     st.header("Step 6: Submit Your Budget")
     st.write(f"**Remaining Budget:** ${remaining_budget:,.2f}")
 
+    # Authorize gspread client
     gspread_client = authorize_gspread()
+
+    # Your Google Sheet key
     SHEET_KEY = "1rgS_NxsZjDkPE07kEpuYxvwktyROXKUfYBk-4t9bkqA"
 
-    if participant_name and Profession and remaining_budget == 0:
-        submit = st.button("Submit")
-        if submit:
-            # Build the base dictionary of data
-            data_dict = {
+    # Show the submit button
+    submit = st.button("Submit")
+
+    if submit:
+        # Only allow submission if user has provided name, chosen a profession,
+        # and balanced the budget (remaining_budget == 0).
+        if participant_name and Profession and remaining_budget == 0:
+            data = {
                 "Name": participant_name,
                 "Profession": Profession,
-                "Military Service": selected_lifestyle_choices.get("Military Service", {}).get("Choice", "No"),
+                "Monthly Income After Tax": monthly_income_after_tax,
                 "Savings": savings,
-                "Who Pays for College": who_pays_for_college
+                "Remaining Budget": remaining_budget
             }
-            # Add each lifestyle category (except ones already included) with their decision and cost.
+            # Add detailed lifestyle choices
             for category, details in selected_lifestyle_choices.items():
-                # Skip if category is already included in base dictionary
-                if category in ["Military Service", "Savings", "Who Pays for College"]:
-                    continue
-                # Create two columns per category:
-                data_dict[f"{category} Decision"] = details.get("Choice", "N/A")
-                data_dict[f"{category} Cost"] = details.get("Cost", 0)
+                decision_col = f"{category} Decision"
+                cost_col = f"{category} Cost"
+                data[decision_col] = details.get("Choice", "")
+                data[cost_col] = details.get("Cost", 0)
 
-            # Convert dictionary to a DataFrame with a single row
-            data = pd.DataFrame([data_dict])
+            # Include additional tax details
+            data["Federal Tax"] = federal_tax
+            data["State Tax"] = state_tax
+            data["Total Tax"] = total_tax
+
+            data_df = pd.DataFrame([data])
+
+            # Save to Google Sheet
             worksheet = get_google_sheet(gspread_client, SHEET_KEY, "participant_data")
-            save_participant_data(data, worksheet)
-    else:
-        st.info("Please complete all steps and ensure your budget is balanced before submitting.")
-
+            save_participant_data(data_df, worksheet)
+        else:
+            st.info("Please complete all steps and ensure your budget is balanced before submitting.")
 
 # ----------------------------------------------------------------------------
 # 4. EXECUTE MAIN FUNCTION
