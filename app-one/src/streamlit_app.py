@@ -246,13 +246,26 @@ def main():
     skillset_data = load_csv(urls["skillset"])
     lifestyle_data = load_csv(urls["lifestyle"])
 
-    skillset_data.columns = (
-    skillset_data.columns
-    .str.strip()
-    .str.replace('\ufeff', '')  # remove BOM if present
-)
-    st.write("Cleaned columns:", skillset_data.columns.tolist())
+    # ─────────────────────────────────────────────────────────────────────────────
+    # DEBUG START
+    # Display raw columns and a few rows to see exactly what's in skillset_data
+    st.write("Raw columns from skillset_data:", skillset_data.columns.tolist())
+    st.write("First few rows of skillset_data (raw):")
+    st.dataframe(skillset_data.head())
 
+    # Clean column names: remove leading/trailing spaces and any BOM (\ufeff)
+    skillset_data.columns = (
+        skillset_data.columns
+        .str.strip()
+        .str.replace('\ufeff', '')  # remove BOM if present
+    )
+
+    # Display columns and rows again to confirm they've been cleaned
+    st.write("Cleaned columns:", skillset_data.columns.tolist())
+    st.write("First few rows of skillset_data (cleaned):")
+    st.dataframe(skillset_data.head())
+    # DEBUG END
+    # ─────────────────────────────────────────────────────────────────────────────
 
     # Step 1: Participant Name
     st.header("Step 1: Enter Your Name")
@@ -260,7 +273,10 @@ def main():
 
     # Step 2: Profession Choice
     st.header("Step 2: Choose Your Profession")
+    # Here, we attempt to select 'Profession' from skillset_data
     Profession = st.selectbox("Select a Profession", skillset_data["Profession"])
+
+    # Retrieve row of selected profession
     selected_Profession = skillset_data[skillset_data["Profession"] == Profession].iloc[0]
 
     # If profession requires school, use "Savings During School"; otherwise "Average Salary"
@@ -451,6 +467,7 @@ def main():
             save_participant_data(data_df, worksheet)
         else:
             st.info("Please complete all steps and ensure your budget is balanced before submitting.")
+
 
 # ----------------------------------------------------------------------------
 # 4. EXECUTE MAIN FUNCTION
