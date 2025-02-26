@@ -246,9 +246,14 @@ def main():
     skillset_data = load_csv(urls["skillset"])
     lifestyle_data = load_csv(urls["lifestyle"])
 
-    st.write("Columns in skillset_data:", skillset_data.columns.tolist())
-    st.write(skillset_data.head())
-    
+    skillset_data.columns = (
+    skillset_data.columns
+    .str.strip()
+    .str.replace('\ufeff', '')  # remove BOM if present
+)
+    st.write("Cleaned columns:", skillset_data.columns.tolist())
+
+
     # Step 1: Participant Name
     st.header("Step 1: Enter Your Name")
     participant_name = st.text_input("Name")
