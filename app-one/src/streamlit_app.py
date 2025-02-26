@@ -246,6 +246,9 @@ def main():
     skillset_data = load_csv(urls["skillset"])
     lifestyle_data = load_csv(urls["lifestyle"])
 
+    st.write("Columns in skillset_data:", skillset_data.columns.tolist())
+    st.write(skillset_data.head())
+    
     # Step 1: Participant Name
     st.header("Step 1: Enter Your Name")
     participant_name = st.text_input("Name")
