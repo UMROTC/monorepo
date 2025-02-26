@@ -246,26 +246,16 @@ def main():
     skillset_data = load_csv(urls["skillset"])
     lifestyle_data = load_csv(urls["lifestyle"])
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # 1. Show initial columns for debugging
-    st.write("Raw columns from skillset_data:", skillset_data.columns.tolist())
-    st.dataframe(skillset_data.head())
-
-    # 2. Clean column names (remove whitespace & BOM if any)
+    # Clean column names: remove any BOM (\ufeff) or leading/trailing spaces
     skillset_data.columns = (
         skillset_data.columns
         .str.strip()
-        .str.replace('\ufeff', '')  # remove BOM if present
+        .str.replace('\ufeff', '')
     )
 
-    # 3. If the CSV uses lowercase "profession", rename it to "Profession"
+    # Rename "profession" to "Profession" if it exists in the CSV
     if "profession" in skillset_data.columns:
         skillset_data.rename(columns={"profession": "Profession"}, inplace=True)
-
-    # 4. Show final columns after cleaning/renaming
-    st.write("Cleaned columns:", skillset_data.columns.tolist())
-    st.dataframe(skillset_data.head())
-    # ─────────────────────────────────────────────────────────────────────────
 
     # Step 1: Participant Name
     st.header("Step 1: Enter Your Name")
@@ -274,12 +264,6 @@ def main():
     # Step 2: Profession Choice
     st.header("Step 2: Choose Your Profession")
     Profession = st.selectbox("Select a Profession", skillset_data["Profession"])
-    selected_Profession = skillset_data[skillset_data["Profession"] == Profession].iloc[0]
-
-    # ... The rest of your code remains unchanged ...
-
-
-    # Retrieve row of selected profession
     selected_Profession = skillset_data[skillset_data["Profession"] == Profession].iloc[0]
 
     # If profession requires school, use "Savings During School"; otherwise "Average Salary"
@@ -337,8 +321,6 @@ def main():
 
     # Step 5: Lifestyle Choices
     st.header("Step 5: Make Lifestyle Choices")
-
-    # Track "Who Pays for College" if needed
     who_pays_for_college = "Unknown"
 
     for category in lifestyle_data["Category"].unique():
@@ -359,7 +341,7 @@ def main():
         choice = st.selectbox(f"Choose your {category.lower()}", options, key=f"{category}_choice")
 
         cost_row = lifestyle_data[
-            (lifestyle_data["Category"] == category) 
+            (lifestyle_data["Category"] == category)
             & (lifestyle_data["Option"] == choice)
         ]
         if not cost_row.empty and "Monthly Cost" in cost_row:
@@ -372,7 +354,7 @@ def main():
         selected_lifestyle_choices[category] = {"Choice": choice, "Cost": cost}
 
         if category == "Who Pays for College":
-            who_pays_for_college = choice  # store separately if needed
+            who_pays_for_college = choice
 
     # Step 5b: Savings
     st.subheader("Savings")
@@ -389,8 +371,8 @@ def main():
             ]["Percentage"].values[0]
 
             if (
-                pd.notna(savings_percentage) 
-                and isinstance(savings_percentage, str) 
+                pd.notna(savings_percentage)
+                and isinstance(savings_percentage, str)
                 and "%" in savings_percentage
             ):
                 savings_percentage = float(savings_percentage.strip("%")) / 100
@@ -433,16 +415,11 @@ def main():
 
     # Authorize gspread client
     gspread_client = authorize_gspread()
-
-    # Your Google Sheet key
     SHEET_KEY = "1rgS_NxsZjDkPE07kEpuYxvwktyROXKUfYBk-4t9bkqA"
 
-    # Show the submit button
     submit = st.button("Submit")
 
     if submit:
-        # Only allow submission if user has provided name, chosen a profession,
-        # and balanced the budget (remaining_budget == 0).
         if participant_name and Profession and remaining_budget == 0:
             data = {
                 "Name": participant_name,
@@ -451,21 +428,18 @@ def main():
                 "Savings": savings,
                 "Remaining Budget": remaining_budget
             }
-            # Add detailed lifestyle choices
             for category, details in selected_lifestyle_choices.items():
                 decision_col = f"{category} Decision"
                 cost_col = f"{category} Cost"
                 data[decision_col] = details.get("Choice", "")
                 data[cost_col] = details.get("Cost", 0)
 
-            # Include additional tax details
             data["Federal Tax"] = federal_tax
             data["State Tax"] = state_tax
             data["Total Tax"] = total_tax
 
             data_df = pd.DataFrame([data])
 
-            # Save to Google Sheet
             worksheet = get_google_sheet(gspread_client, SHEET_KEY, "participant_data")
             save_participant_data(data_df, worksheet)
         else:
