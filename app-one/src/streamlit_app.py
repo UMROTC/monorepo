@@ -409,7 +409,7 @@ def main():
     for cat, details in selected_lifestyle_choices.items():
         st.write(f"**{cat}:** {details['Choice']} - ${details['Cost']:,.2f}")
 
-    # Step 6: Submit
+     # Step 6: Submit
     st.header("Step 6: Submit Your Budget")
     st.write(f"**Remaining Budget:** ${remaining_budget:,.2f}")
 
@@ -420,28 +420,38 @@ def main():
     submit = st.button("Submit")
 
     if submit:
+        # Only allow submission if user has provided name, chosen a profession,
+        # and balanced the budget (remaining_budget == 0).
         if participant_name and Profession and remaining_budget == 0:
+            # 1. Build your base participant data
             data = {
                 "Name": participant_name,
                 "Profession": Profession,
                 "Monthly Income After Tax": monthly_income_after_tax,
                 "Savings": savings,
-                "Remaining Budget": remaining_budget
+                "Remaining Budget": remaining_budget,
+                "Federal Tax": federal_tax,
+                "State Tax": state_tax,
+                "Total Tax": total_tax
             }
+
+            # 2. For each lifestyle category, create a separate column with
+            #    "Choice - $Cost"
+            #    e.g., "Military Service": "No - $0.00"
             for category, details in selected_lifestyle_choices.items():
-                decision_col = f"{category} Decision"
-                cost_col = f"{category} Cost"
-                data[decision_col] = details.get("Choice", "")
-                data[cost_col] = details.get("Cost", 0)
+                choice = details.get("Choice", "")
+                cost = details.get("Cost", 0)
+                # The column name will be the category string, e.g. "Housing", "Food", etc.
+                # The cell value will look like "Apartment - $750.00"
+                data[category] = f"{choice} - ${cost:,.2f}"
 
-            data["Federal Tax"] = federal_tax
-            data["State Tax"] = state_tax
-            data["Total Tax"] = total_tax
-
+            # 3. Convert the dictionary into a DataFrame
             data_df = pd.DataFrame([data])
 
+            # 4. Save to Google Sheet
             worksheet = get_google_sheet(gspread_client, SHEET_KEY, "participant_data")
             save_participant_data(data_df, worksheet)
+
         else:
             st.info("Please complete all steps and ensure your budget is balanced before submitting.")
 
