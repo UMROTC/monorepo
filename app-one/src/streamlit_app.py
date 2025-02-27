@@ -254,15 +254,7 @@ def main():
     monthly_income_after_tax = (salary - federal_tax - state_tax) / 12
     st.write(f"**Monthly Income After Tax:** ${monthly_income_after_tax:,.2f}")
 
-    # Sidebar budget display
-    st.sidebar.header("Remaining Monthly Budget")
-    remaining_budget_display = st.sidebar.empty()
-    remaining_budget_message = st.sidebar.empty()
-
-    # Track budget
-    remaining_budget = monthly_income_after_tax
-    expenses = 0
-    savings = 0
+    # Track user choices in dictionaries
     selected_lifestyle_choices = {}
 
     # Step 4: Military Service
@@ -272,8 +264,11 @@ def main():
         ["No", "Part Time", "Full Time"],
         key="Military_Service"
     )
-    # Store text only (cost=0 placeholder)
-    selected_lifestyle_choices["Military Service"] = {"Choice": military_service_choice, "Cost": 0}
+    # Just store the text and a cost=0 placeholder
+    selected_lifestyle_choices["Military Service"] = {
+        "Choice": military_service_choice,
+        "Cost": 0
+    }
 
     # Define which categories can have "Military" as an option
     allowed_military_part_time = ["Children", "Who Pays for College", "Health Insurance"]
@@ -283,7 +278,7 @@ def main():
     st.header("Step 5: Make Lifestyle Choices")
 
     for category in lifestyle_data["Category"].unique():
-        # We'll skip "Savings" until after this loop
+        # We'll skip "Savings" until after collecting these
         if category == "Savings":
             continue
 
@@ -303,7 +298,11 @@ def main():
             st.warning(f"No available options for '{category}' given your current military choice.")
             continue
 
-        choice = st.selectbox(f"Choose your {category.lower()}", options, key=f"{category}_choice")
+        choice = st.selectbox(
+            f"Choose your {category.lower()}",
+            options,
+            key=f"{category}_choice"
+        )
         cost_row = lifestyle_data[
             (lifestyle_data["Category"] == category) & (lifestyle_data["Option"] == choice)
         ]
@@ -315,26 +314,25 @@ def main():
             except ValueError:
                 cost = 0
 
-        remaining_budget -= cost
-        expenses += cost
+        # Store the chosen cost for now, but do NOT reduce any "running" budget
         selected_lifestyle_choices[category] = {"Choice": choice, "Cost": cost}
 
     # Step 5b: Savings
     st.subheader("Savings")
     savings_options = lifestyle_data[lifestyle_data["Category"] == "Savings"]["Option"].tolist()
-    savings_choice = st.selectbox("Choose your savings option", savings_options, key="Savings_Choice")
+    savings_choice = st.selectbox(
+        "Choose your savings option",
+        savings_options,
+        key="Savings_Choice"
+    )
 
+    # We'll decide the actual savings cost after we see how much the user has left
+    calculated_savings = 0.0
     if savings_choice.lower() == "whatever is left":
-        # If user has already overspent or is at 0, cannot save
-        if remaining_budget <= 0:
-            st.warning("You have no remaining budget to save—your total expenses exceed your income.")
-            savings = 0
-        else:
-            # Save exactly what's left
-            savings = remaining_budget
-        # Let the budget go negative if it was already negative (no clamping)
-        remaining_budget -= savings
+        # We'll finalize "whatever is left" after we sum all other expenses
+        calculated_savings = None  # special marker
     else:
+        # Percentage-based or zero
         try:
             savings_row = lifestyle_data[
                 (lifestyle_data["Category"] == "Savings") & 
@@ -347,37 +345,61 @@ def main():
                 and "%" in savings_percentage_str
             ):
                 savings_percentage = float(savings_percentage_str.strip("%")) / 100
-                savings = savings_percentage * monthly_income_after_tax
+                calculated_savings = savings_percentage * monthly_income_after_tax
             else:
-                savings = 0
+                calculated_savings = 0
         except Exception:
             st.error(f"Savings percentage not found or invalid for choice: {savings_choice}")
-            savings = 0
+            calculated_savings = 0
 
-        if savings > remaining_budget:
-            st.error(
-                f"Warning: Your savings choice exceeds your budget by "
-                f"${abs(remaining_budget - savings):,.2f}!"
-            )
-            savings = remaining_budget
-            # Here we set the budget to 0, implying you can't save more than what you have left
-            remaining_budget -= savings
+    selected_lifestyle_choices["Savings"] = {"Choice": savings_choice, "Cost": 0}  # We'll finalize cost below
+
+    # -----------------------------
+    # CHANGED: Compute final budget
+    # -----------------------------
+
+    # 1) Sum up all non-savings costs
+    total_expenses = sum(
+        details["Cost"] 
+        for cat, details in selected_lifestyle_choices.items() 
+        if cat not in ["Military Service", "Savings"]
+    )
+
+    # 2) If the user chose "whatever is left" for savings,
+    #    then "calculated_savings" is None. We compute after expenses:
+    if calculated_savings is None:
+        # If monthly_income_after_tax - total_expenses is already negative,
+        # there's nothing left to save
+        if (monthly_income_after_tax - total_expenses) <= 0:
+            st.warning("You have no remaining budget to save—your expenses exceed your income.")
+            calculated_savings = 0
         else:
-            remaining_budget -= savings
+            calculated_savings = (monthly_income_after_tax - total_expenses)
 
-    selected_lifestyle_choices["Savings"] = {"Choice": savings_choice, "Cost": savings}
+    # 3) Final remaining budget after expenses + savings
+    remaining_budget = monthly_income_after_tax - total_expenses - calculated_savings
 
-    # Update sidebar
+    # 4) Update the "Savings" cost in the dictionary
+    selected_lifestyle_choices["Savings"]["Cost"] = calculated_savings
+
+    # -----------------------------
+    # Sidebar & Summary
+    # -----------------------------
+    st.sidebar.header("Remaining Monthly Budget")
+    remaining_budget_display = st.sidebar.empty()
+    remaining_budget_message = st.sidebar.empty()
+
+    # Show the updated sidebar info
     remaining_budget_display.markdown(f"### Remaining Monthly Budget: ${remaining_budget:,.2f}")
+
     if remaining_budget > 0:
         remaining_budget_message.warning(f"You have ${remaining_budget:,.2f} left.")
     elif remaining_budget == 0:
         remaining_budget_message.success("You have balanced your budget perfectly!")
     else:
-        # Negative means overspent
         remaining_budget_message.error(f"You have overspent by ${-remaining_budget:,.2f}!")
 
-    # Summary
+    # Step 5c: Show Summary
     st.subheader("Lifestyle Choices Summary")
     for cat, details in selected_lifestyle_choices.items():
         st.write(f"**{cat}:** {details['Choice']} - ${details['Cost']:,.2f}")
@@ -426,13 +448,13 @@ def main():
                 "Monthly Income After Tax": monthly_income_after_tax,
             }
 
-            # Add each lifestyle category cost EXCEPT for 
-            # Marital Status & Military Service (already stored as text):
+            # Add each lifestyle category cost EXCEPT 
+            # "Military Service" (already stored as text).
             for category, details in selected_lifestyle_choices.items():
-                if category in ["Military Service"]:
-                    continue  # We already have 'Military Service' as text
-                data[f"{category} Cost"] = details.get("Cost", 0)
-                data[f"{category} Choice"] = details.get("Choice", "")
+                if category == "Military Service":
+                    continue
+                data[f"{category} Cost"] = details["Cost"]
+                data[f"{category} Choice"] = details["Choice"]
 
             data_df = pd.DataFrame([data])
 
