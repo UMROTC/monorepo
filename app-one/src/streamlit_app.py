@@ -203,7 +203,6 @@ def save_participant_data(data_frame, worksheet):
 # ----------------------------------------------------------------------------
 # 3. MAIN APP LOGIC
 # ----------------------------------------------------------------------------
-
 def main():
     st.title("Budget Simulator")
         
@@ -273,8 +272,7 @@ def main():
         ["No", "Part Time", "Full Time"],
         key="Military_Service"
     )
-    # We won't store a cost for Military Service; we store the text instead.
-    # But we do keep track in `selected_lifestyle_choices` with cost=0 just for consistency:
+    # Store text only (cost=0 placeholder)
     selected_lifestyle_choices["Military Service"] = {"Choice": military_service_choice, "Cost": 0}
 
     # Define which categories can have "Military" as an option
@@ -327,12 +325,15 @@ def main():
     savings_choice = st.selectbox("Choose your savings option", savings_options, key="Savings_Choice")
 
     if savings_choice.lower() == "whatever is left":
+        # If user has already overspent or is at 0, cannot save
         if remaining_budget <= 0:
             st.warning("You have no remaining budget to save—your total expenses exceed your income.")
             savings = 0
         else:
+            # Save exactly what's left
             savings = remaining_budget
-        remaining_budget = max(0, remaining_budget - savings)
+        # Let the budget go negative if it was already negative (no clamping)
+        remaining_budget -= savings
     else:
         try:
             savings_row = lifestyle_data[
@@ -341,9 +342,9 @@ def main():
             ]
             savings_percentage_str = savings_row["Percentage"].values[0]  # e.g. "10%"
             if (
-                pd.notna(savings_percentage_str) and
-                isinstance(savings_percentage_str, str) and
-                "%" in savings_percentage_str
+                pd.notna(savings_percentage_str)
+                and isinstance(savings_percentage_str, str)
+                and "%" in savings_percentage_str
             ):
                 savings_percentage = float(savings_percentage_str.strip("%")) / 100
                 savings = savings_percentage * monthly_income_after_tax
@@ -359,7 +360,8 @@ def main():
                 f"${abs(remaining_budget - savings):,.2f}!"
             )
             savings = remaining_budget
-            remaining_budget = 0
+            # Here we set the budget to 0, implying you can't save more than what you have left
+            remaining_budget -= savings
         else:
             remaining_budget -= savings
 
@@ -372,6 +374,7 @@ def main():
     elif remaining_budget == 0:
         remaining_budget_message.success("You have balanced your budget perfectly!")
     else:
+        # Negative means overspent
         remaining_budget_message.error(f"You have overspent by ${-remaining_budget:,.2f}!")
 
     # Summary
@@ -424,11 +427,10 @@ def main():
             }
 
             # Add each lifestyle category cost EXCEPT for 
-            # Marital Status & Military Service (we've already stored them as text):
+            # Marital Status & Military Service (already stored as text):
             for category, details in selected_lifestyle_choices.items():
                 if category in ["Military Service"]:
-                    # Already stored the text in `data["Military Service"]`
-                    continue
+                    continue  # We already have 'Military Service' as text
                 data[f"{category} Cost"] = details.get("Cost", 0)
                 data[f"{category} Choice"] = details.get("Choice", "")
 
