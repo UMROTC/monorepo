@@ -429,21 +429,13 @@ def main():
                 "Profession": Profession,
                 "Monthly Income After Tax": monthly_income_after_tax,
                 "Savings": savings,
-                "Remaining Budget": remaining_budget,
-                "Federal Tax": federal_tax,
-                "State Tax": state_tax,
-                "Total Tax": total_tax
+                
             }
 
-            # 2. For each lifestyle category, create a separate column with
-            #    "Choice - $Cost"
-            #    e.g., "Military Service": "No - $0.00"
+            # 2. Append each lifestyle category's cost to the same dictionary
             for category, details in selected_lifestyle_choices.items():
-                choice = details.get("Choice", "")
-                cost = details.get("Cost", 0)
-                # The column name will be the category string, e.g. "Housing", "Food", etc.
-                # The cell value will look like "Apartment - $750.00"
-                data[category] = f"{choice} - ${cost:,.2f}"
+             # Store only the numeric cost
+                data[category] = details.get("Cost", 0)
 
             # 3. Convert the dictionary into a DataFrame
             data_df = pd.DataFrame([data])
