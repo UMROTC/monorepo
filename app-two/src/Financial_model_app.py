@@ -458,16 +458,16 @@ def get_networth_at(row, month):
 def generate_pair_report(c_row, m_row):
     """
     Generates an HTML report for a civilian (c_row) and military (m_row) participant pair.
-    Layout based on the provided Financial_Projection_Summary.pdf:
-      - Header with professional details.
-      - Table summarizing lifestyle choices and costs.
-      - A line chart (Simple Net Worth Over Time) for key years: 2025, 2035, 2045.
-      - Detailed profession description with military equivalent.
+    Layout based on the provided PDF:
+      - Header with professional details from Skillset_cost_worksheet_csv.
+      - Lifestyle summary table.
+      - A net worth chart using values at 2025 (month 1), 2035 (month 120) and 2045 (month 240).
+      - Profession description (civilian) and military counterpart roles from Profession_Data.
     """
     # Retrieve professional details from skill_df (for the civilian row)
     common_info = get_common_info(c_row, skill_df)
     
-    # Retrieve job descriptions from Profession Data (match by Profession)
+    # Retrieve job descriptions from Profession_Data (match by Profession)
     profession = c_row.get("Profession", "").strip()
     prof_match = profession_df[profession_df["Profession"].str.strip().str.lower() == profession.lower()]
     if not prof_match.empty:
@@ -488,7 +488,7 @@ def generate_pair_report(c_row, m_row):
         "Lifestyle Cost": m_row.get("Lifestyle Cost", "N/A")
     }
     
-    # Create a table (HTML) for Lifestyle Summary (one row per participant)
+    # Create a table (HTML) for Lifestyle Summary
     lifestyle_table_html = f"""
     <table style="width:100%; border-collapse: collapse;" border="1">
       <tr>
@@ -509,13 +509,11 @@ def generate_pair_report(c_row, m_row):
     </table>
     """
     
-    # Build a net worth line chart using Plotly at key months.
-    # Map: month 1 -> 2025, month 120 -> 2035, month 240 -> 2045.
+    # Build a net worth line chart using Plotly for 2025, 2035, and 2045.
     years = [2025, 2035, 2045]
     c_values = [get_networth_at(c_row, 1), get_networth_at(c_row, 120), get_networth_at(c_row, 240)]
     m_values = [get_networth_at(m_row, 1), get_networth_at(m_row, 120), get_networth_at(m_row, 240)]
     
-    # Create the line chart figure.
     chart_fig = px.line(
         x=years,
         y=c_values,
@@ -524,8 +522,10 @@ def generate_pair_report(c_row, m_row):
         labels={"x": "Year", "y": "Net Worth ($)"}
     )
     chart_fig.add_scatter(x=years, y=m_values, mode="lines+markers", name=m_row.get("Name", ""))
-    # Update layout to mimic the PDF (range, etc.)
-    chart_fig.update_yaxes(range=[min(min(c_values), min(m_values)) - 50000, max(max(c_values), max(m_values)) + 50000])
+    # Optionally adjust the y-axis range based on data values.
+    min_val = min([v for v in c_values + m_values if v is not None], default=0)
+    max_val = max([v for v in c_values + m_values if v is not None], default=0)
+    chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
     chart_html = chart_fig.to_html(full_html=False, include_plotlyjs='cdn')
     
     # Build the HTML report string using a layout similar to your provided PDF.
@@ -605,6 +605,7 @@ def generate_pair_report(c_row, m_row):
     </html>
     """
     return report_html
+
 
 def generate_combined_pdf_report(report_html_list, pdf_output_path):
     """
