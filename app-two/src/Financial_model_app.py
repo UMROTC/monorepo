@@ -265,7 +265,7 @@ for _, row in participant_df.iterrows():
     for record in row["Net Worth Over Time"]:
         expanded_rows.append({
             "Name": row["Name"],
-            "profession": row["profession"],  # Participant's profession (capitalized)
+            "profession": row["Profession"],  # Participant's profession (capitalized)
             "Month": record["Month"],
             "Savings Balance": record["Accrued Savings"],
             "Loan Balance": record["Loan Value"],
