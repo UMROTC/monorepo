@@ -427,15 +427,47 @@ except Exception as e:
     st.error(f"Error loading Profession Data file: {e}")
     st.stop()
 
+def get_common_info(row, skill_df):
+    """Extract professional details from skill_df for a given participant row."""
+    profession = row.get("Profession", "").strip()
+    skill_subset = skill_df[skill_df["Profession"].str.strip() == profession]
+    if skill_subset.empty:
+        return {"Profession": "N/A", "Average Salary": "N/A", "Years of School": "N/A", "School Cost": "N/A", "Savings During School": "N/A"}
+    fin_row = skill_subset.iloc[0]
+    try:
+        months_school_val = int(fin_row.get("Months School", 0))
+    except Exception:
+        months_school_val = 0
+    # Optionally, if a "School Cost" column exists, use it.
+    school_cost = fin_row.get("School Cost", "N/A")
+    return {
+        "Profession": fin_row.get("Profession", "N/A"),
+        "Average Salary": fin_row.get("Average Salary", "N/A"),
+        "Years of School": f"{float(months_school_val)/12:.1f}" if months_school_val else "N/A",
+        "School Cost": school_cost,
+        "Savings During School": fin_row.get("Monthly Savings in School", "N/A")
+    }
+
+def get_networth_at(row, month):
+    """Helper: Return the net worth for a participant at the specified month (1-indexed)."""
+    nw_list = row.get("Net Worth Over Time", [])
+    if len(nw_list) >= month:
+        return nw_list[month - 1]["Net Worth"]
+    return None
+
 def generate_pair_report(c_row, m_row):
     """
     Generates an HTML report for a civilian (c_row) and military (m_row) participant pair.
-    This report includes:
-      - Profession and job descriptions (from Profession Data)
-      - Lifestyle decisions and costs
-      - A bar chart comparing net worth at 20 years (month 240)
+    Layout based on the provided Financial_Projection_Summary.pdf:
+      - Header with professional details.
+      - Table summarizing lifestyle choices and costs.
+      - A line chart (Simple Net Worth Over Time) for key years: 2025, 2035, 2045.
+      - Detailed profession description with military equivalent.
     """
-    # Retrieve profession and job descriptions
+    # Retrieve professional details from skill_df (for the civilian row)
+    common_info = get_common_info(c_row, skill_df)
+    
+    # Retrieve job descriptions from Profession Data (match by Profession)
     profession = c_row.get("Profession", "").strip()
     prof_match = profession_df[profession_df["Profession"].str.strip().str.lower() == profession.lower()]
     if not prof_match.empty:
@@ -446,7 +478,7 @@ def generate_pair_report(c_row, m_row):
         civilian_desc = "Description not available."
         military_desc = "Description not available."
     
-    # Retrieve lifestyle details
+    # Retrieve lifestyle details (assume columns "Lifestyle Decisions" and "Lifestyle Cost")
     c_lifestyle = {
         "Lifestyle Decisions": c_row.get("Lifestyle Decisions", "N/A"),
         "Lifestyle Cost": c_row.get("Lifestyle Cost", "N/A")
@@ -456,69 +488,118 @@ def generate_pair_report(c_row, m_row):
         "Lifestyle Cost": m_row.get("Lifestyle Cost", "N/A")
     }
     
-    # Extract net worth at 20 years (month 240) for both participants
-    def get_networth_240(row):
-        nw_list = row.get("Net Worth Over Time", [])
-        if len(nw_list) >= 240:
-            return nw_list[239]["Net Worth"]
-        return None
-    c_networth_240 = get_networth_240(c_row)
-    m_networth_240 = get_networth_240(m_row)
+    # Create a table (HTML) for Lifestyle Summary (one row per participant)
+    lifestyle_table_html = f"""
+    <table style="width:100%; border-collapse: collapse;" border="1">
+      <tr>
+        <th>Participant</th>
+        <th>Lifestyle Decisions</th>
+        <th>Monthly Cost</th>
+      </tr>
+      <tr>
+        <td>{c_row.get("Name", "")}</td>
+        <td>{c_lifestyle.get("Lifestyle Decisions")}</td>
+        <td>{c_lifestyle.get("Lifestyle Cost")}</td>
+      </tr>
+      <tr>
+        <td>{m_row.get("Name", "")}</td>
+        <td>{m_lifestyle.get("Lifestyle Decisions")}</td>
+        <td>{m_lifestyle.get("Lifestyle Cost")}</td>
+      </tr>
+    </table>
+    """
     
-    # Build a simple bar chart using Plotly
-    chart_data = {"Name": [], "Net Worth": []}
-    if c_networth_240 is not None:
-        chart_data["Name"].append(c_row.get("Name", ""))
-        chart_data["Net Worth"].append(c_networth_240)
-    if m_networth_240 is not None:
-        chart_data["Name"].append(m_row.get("Name", ""))
-        chart_data["Net Worth"].append(m_networth_240)
-    chart_df = pd.DataFrame(chart_data)
-    chart_fig = px.bar(
-        chart_df,
-        x="Name",
-        y="Net Worth",
-        title="Net Worth Comparison at 20 Years",
-        labels={"Net Worth": "Net Worth ($)", "Name": "Participant"}
+    # Build a net worth line chart using Plotly at key months.
+    # Map: month 1 -> 2025, month 120 -> 2035, month 240 -> 2045.
+    years = [2025, 2035, 2045]
+    c_values = [get_networth_at(c_row, 1), get_networth_at(c_row, 120), get_networth_at(c_row, 240)]
+    m_values = [get_networth_at(m_row, 1), get_networth_at(m_row, 120), get_networth_at(m_row, 240)]
+    
+    # Create the line chart figure.
+    chart_fig = px.line(
+        x=years,
+        y=c_values,
+        markers=True,
+        title="Simple Net Worth Over Time",
+        labels={"x": "Year", "y": "Net Worth ($)"}
     )
+    chart_fig.add_scatter(x=years, y=m_values, mode="lines+markers", name=m_row.get("Name", ""))
+    # Update layout to mimic the PDF (range, etc.)
+    chart_fig.update_yaxes(range=[min(min(c_values), min(m_values)) - 50000, max(max(c_values), max(m_values)) + 50000])
     chart_html = chart_fig.to_html(full_html=False, include_plotlyjs='cdn')
     
-    # Build HTML report string
+    # Build the HTML report string using a layout similar to your provided PDF.
     report_html = f"""
     <html>
       <head>
         <meta charset="utf-8">
-        <title>Financial Report: {c_row.get("Name", "")} vs. {m_row.get("Name", "")}</title>
+        <title>Financial Projection Summary: {c_row.get("Name", "")} vs. {m_row.get("Name", "")}</title>
         <style>
           body {{
             font-family: Arial, sans-serif;
             margin: 20px;
           }}
-          .top-section {{
+          .header {{
+            text-align: center;
             margin-bottom: 20px;
           }}
-          .lifestyle {{
+          .header h1 {{
+            margin: 0;
+            font-size: 24px;
+          }}
+          .header h2 {{
+            margin: 5px 0;
+            font-size: 18px;
+          }}
+          .professional-details {{
+            margin-bottom: 20px;
+            text-align: center;
+          }}
+          .professional-details p {{
+            margin: 2px;
+            font-size: 14px;
+          }}
+          .lifestyle-section {{
             margin-bottom: 20px;
           }}
-          .chart {{
+          .chart-section {{
+            margin-bottom: 20px;
+          }}
+          .description-section {{
             margin-top: 30px;
+            font-size: 12px;
+          }}
+          .description-section h3 {{
+            margin-bottom: 5px;
           }}
         </style>
       </head>
       <body>
-        <div class="top-section">
-          <h1>Financial Report: {c_row.get("Name", "")} vs. {m_row.get("Name", "")}</h1>
-          <h2>Profession: {profession}</h2>
-          <p><strong>Civilian Description:</strong> {civilian_desc}</p>
-          <p><strong>Military Description:</strong> {military_desc}</p>
+        <!-- Header with Professional Details -->
+        <div class="header">
+          <h1>{common_info.get("Profession")}</h1>
+          <h2>Annual Salary: {common_info.get("Average Salary")}</h2>
         </div>
-        <div class="lifestyle">
-          <h3>Lifestyle Details</h3>
-          <p><strong>{c_row.get("Name", "")}:</strong> Decisions: {c_lifestyle.get("Lifestyle Decisions", "N/A")}, Cost: {c_lifestyle.get("Lifestyle Cost", "N/A")}</p>
-          <p><strong>{m_row.get("Name", "")}:</strong> Decisions: {m_lifestyle.get("Lifestyle Decisions", "N/A")}, Cost: {m_lifestyle.get("Lifestyle Cost", "N/A")}</p>
+        <div class="professional-details">
+          <p>Years of School: {common_info.get("Years of School")}</p>
+          <p>Average Cost of School: {common_info.get("School Cost")}</p>
+          <p>Savings During School: {common_info.get("Savings During School")}</p>
         </div>
-        <div class="chart">
+        <!-- Lifestyle Summary -->
+        <div class="lifestyle-section">
+          <h3>Summary of Lifestyle Choices</h3>
+          {lifestyle_table_html}
+        </div>
+        <!-- Net Worth Chart -->
+        <div class="chart-section">
           {chart_html}
+        </div>
+        <!-- Profession Description -->
+        <div class="description-section">
+          <h3>Profession Description</h3>
+          <p>{civilian_desc}</p>
+          <h3>Military Equivalent</h3>
+          <p>{military_desc}</p>
         </div>
       </body>
     </html>
@@ -552,7 +633,7 @@ def generate_combined_pdf_report(report_html_list, pdf_output_path):
 all_reports = []
 for index, row in participant_df.iterrows():
     name = row.get("Name", "").strip()
-    # Skip if this row is already a military entry (assuming naming convention)
+    # Skip if this row is already a military entry (assuming naming convention ends with "-mil")
     if name.endswith("-mil"):
         continue
     mil_name = name + "-mil"
@@ -563,7 +644,7 @@ for index, row in participant_df.iterrows():
     mil_row = mil_rows.iloc[0]
     report_html = generate_pair_report(row, mil_row)
     all_reports.append(report_html)
-    # Optionally, save individual HTML files:
+    # Optionally, save individual HTML files for debugging:
     # individual_report_path = current_dir / f"report_{name}.html"
     # with open(individual_report_path, "w", encoding="utf-8") as f:
     #     f.write(report_html)
