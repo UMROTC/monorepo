@@ -141,13 +141,13 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
         loan_source = gi_bill_df.copy()
 
     # 2) Save the original profession (for display) and standardize for lookup (only stripping whitespace)
-    original_profession = row.get("profession", "").strip()
+    original_profession = row.get("Profession", "").strip()
     loan_source.columns = loan_source.columns.str.strip()  # Preserve capitalization
     # For matching, we use the exact string after stripping extra whitespace
     profession = original_profession
 
     # 3) Filter the financial data by profession
-    subset = loan_source.loc[loan_source["profession"].str.strip() == profession]
+    subset = loan_source.loc[loan_source["Profession"].str.strip() == profession]
     if subset.empty:
         print(f"[DEBUG] Profession '{profession}' not found in the selected loan source.")
         default_financials = []
@@ -533,7 +533,7 @@ def generate_pair_report(p_row, m_row):
       - A bar chart comparing net worth at 20 years (month 240) for the pair
     """
     # Retrieve common financial details from the Skillset Cost Worksheet for the profession.
-    profession = p_row.get("profession", "").strip()
+    profession = p_row.get("Profession", "").strip()
     skill_subset = skill_df[skill_df["profession"].str.strip() == profession]
     if skill_subset.empty:
         common_info = {"Profession": "N/A", "Average Salary": "N/A", "Years of School": 0, "Savings During School": "N/A"}
@@ -544,7 +544,7 @@ def generate_pair_report(p_row, m_row):
         except Exception:
             months_school_val = 0
         common_info = {
-            "Profession": fin_row.get("profession", "N/A"),
+            "Profession": fin_row.get("Profession", "N/A"),
             "Average Salary": fin_row.get("Average Salary", "N/A"),
             "Years of School": float(months_school_val) / 12.0 if months_school_val else 0,
             "Savings During School": fin_row.get("Monthly Savings in School", "N/A")
