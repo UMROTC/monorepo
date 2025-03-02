@@ -56,7 +56,7 @@ repo_root = current_dir.parent.parent
 
 skillset_cost_worksheet_path = repo_root / 'app-one' / 'data' / 'input' / 'Skillset_cost_worksheet_CSV.csv'
 gi_bill_path = repo_root / 'app-two' / 'data' / 'input' / 'GI_Bill_Application.csv'
-profession_data_path = repo_root / 'app-one' / 'data' / 'input' / 'Profession Data.csv'
+profession_data_path = repo_root / 'app-two' / 'data' / 'input' / 'Profession Data.csv'
 
 # Load GI Bill and Profession Data files
 try:
