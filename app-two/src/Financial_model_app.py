@@ -422,7 +422,7 @@ from weasyprint import HTML  # for PDF conversion
 # Load Profession Data (for job descriptions)
 profession_data_path = repo_root / 'app-two' / 'data' / 'input' / 'Profession_Data.csv'
 try:
-    profession_df = pd.read_csv(profession_data_path, encoding='cp1252')
+    profession_df = pd.read_csv(profession_data_path, encoding='latin1')
 except Exception as e:
     st.error(f"Error loading Profession Data file: {e}")
     st.stop()
