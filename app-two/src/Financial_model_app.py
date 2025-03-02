@@ -91,27 +91,39 @@ except Exception as e:
     print(f"Error loading files: {e}")
     exit()
 
-# Standardize column names by stripping whitespace (preserve capitalization)
+# 1. Standardize column names by stripping whitespace (preserve capitalization)
 participant_df.columns = participant_df.columns.str.strip()
-skill_df.columns = skill_df.columns.str.strip()
-gi_bill_df.columns = gi_bill_df.columns.str.strip()
+skill_df.columns       = skill_df.columns.str.strip()
+gi_bill_df.columns     = gi_bill_df.columns.str.strip()
+
+# 2. Rename "profession" -> "Profession" in skill_df, gi_bill_df, participant_df if it exists
+if "profession" in skill_df.columns:
+    skill_df.rename(columns={"profession": "Profession"}, inplace=True)
+if "profession" in gi_bill_df.columns:
+    gi_bill_df.rename(columns={"profession": "Profession"}, inplace=True)
+if "profession" in participant_df.columns:
+    participant_df.rename(columns={"profession": "Profession"}, inplace=True)
 
 print("Participant data columns:", participant_df.columns.tolist())
 print("Skillset cost worksheet columns:", skill_df.columns.tolist())
 print("GI Bill data columns:", gi_bill_df.columns.tolist())
 
-# Optional debug loop: Check if each participant's profession exists in the appropriate financial data
+# 3. Optional debug loop: Check if each participant's Profession exists in the appropriate financial data
 for i, row in participant_df.iterrows():
     ms = str(row.get("Military Service", "")).strip()
+    # Decide which sheet to match
     if ms.lower() == "no":
         loan_source = skill_df
     else:
         loan_source = gi_bill_df
-    # Do not change case; just strip whitespace
-    prof = str(row.get("profession", "")).strip()
-    matching = loan_source.loc[loan_source["profession"].str.strip() == prof]
+
+    # Extract the participant's Profession (capitalized column now)
+    prof = str(row.get("Profession", "")).strip()
+
+    # Compare with "Profession" in loan_source
+    matching = loan_source.loc[loan_source["Profession"].str.strip() == prof]
     if matching.empty:
-        print(f"[DEBUG] Row={i}, Name='{row.get('Name')}', profession='{row.get('profession')}'"
+        print(f"[DEBUG] Row={i}, Name='{row.get('Name')}', Profession='{row.get('Profession')}'"
               f" => NOT FOUND in {'skill_df' if ms.lower()=='no' else 'gi_bill_df'}")
 
 # -------------------------------------------------------------------------
