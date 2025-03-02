@@ -1,104 +1,89 @@
-Profession,Description,Military Equivalent ,
-Carpenter,"Carpenters work in the building trades, focusing on the construction, installation, and repair of wooden structures and fixtures. They often read blueprints, measure and cut materials, and assemble framing, cabinetry, doors, and other wooden components. Carpenters need strong mathematical, problem-solving, and physical skills to ensure precise and safe construction projects.","Army (MOS): 12W (Carpentry and Masonry Specialist)
-Marine Corps (MOS): 1371 (Combat Engineer ñ includes some carpentry tasks)
+ÔªøProfession,Description,Military Equivalent 
+"Carpenter, Electrician, Plumber","Carpenters work in the building trades, focusing on the construction, installation, and repair of wooden structures and fixtures. They often read blueprints, measure and cut materials, and assemble framing, cabinetry, doors, and other wooden components. Carpenters need strong mathematical, problem-solving, and physical skills to ensure precise and safe construction projects.===Electricians specialize in installing, maintaining, and repairing electrical systems in residential, commercial, and industrial buildings. Their work includes reading technical diagrams, wiring circuits, and ensuring compliance with electrical codes. Electricians must be knowledgeable about safety protocols and have good troubleshooting skills to address various electrical issues efficiently. ===Plumbers focus on the installation, maintenance, and repair of water, drainage, and gas systems. From installing pipes and fixtures in new construction to fixing leaks and clogs, they ensure a clean and reliable water supply. Plumbers use technical expertise, problem-solving abilities, and compliance with safety regulations to keep systems running smoothly in homes, businesses, and other facilities.","Army (MOS): 12W (Carpentry and Masonry Specialist)
+Marine Corps (MOS): 1371 (Combat Engineer ‚Äì includes some carpentry tasks)
 Navy (Rating): BU (Builder, in the Seabees)
 Air Force (AFSC): 3E3X1 (Structural)
-Coast Guard: No direct carpentry rating; DC (Damage Controlman) may do limited structural repair.",
-Electrician,"Electricians specialize in installing, maintaining, and repairing electrical systems in residential, commercial, and industrial buildings. Their work includes reading technical diagrams, wiring circuits, and ensuring compliance with electrical codes. Electricians must be knowledgeable about safety protocols and have good troubleshooting skills to address various electrical issues efficiently.","Army (MOS): 12R (Interior Electrician)
-Marine Corps (MOS): 1141 (Electrician)
-Navy (Rating): CE (Construction Electrician, in the Seabees)
-Air Force (AFSC): 3E0X1 (Electrical Systems)
- Coast Guard (Rating): EM (Electricianís Mate)",
-Plumber,"Plumbers focus on the installation, maintenance, and repair of water, drainage, and gas systems. From installing pipes and fixtures in new construction to fixing leaks and clogs, they ensure a clean and reliable water supply. Plumbers use technical expertise, problem-solving abilities, and compliance with safety regulations to keep systems running smoothly in homes, businesses, and other facilities.","Army (MOS): 12K (Plumber)
-Marine Corps (MOS): 1171 (Water Support Technician) ñ covers some plumbing functions
-Navy (Rating): UT (Utilitiesman, in the Seabees)
-Air Force (AFSC): 3E4X1 (Water and Fuel Systems Maintenance)
-Coast Guard: Primarily covered by DC (Damage Controlman) for shipboard plumbing; no direct ìplumberî rating.",
+Coast Guard: No direct carpentry rating; DC (Damage Controlman) may do limited structural repair."
 Police,"Police officers serve and protect communities by upholding laws, preventing crimes, and responding to emergencies. Their duties include patrolling neighborhoods, investigating incidents, making arrests, and assisting in crisis situations. Effective communication, courage, and a strong sense of responsibility are crucial for maintaining public trust and safety.","	Army (MOS): 31B (Military Police)
 Marine Corps (MOS): 5811 (Military Police)
 Navy (Rating): MA (Master-at-Arms)
 Air Force (AFSC): 3P0X1 (Security Forces)
-Coast Guard (Rating): ME (Maritime Enforcement Specialist)",
+Coast Guard (Rating): ME (Maritime Enforcement Specialist)"
 Fire,"Firefighters are first responders who tackle fires, accidents, and other emergencies to protect lives and property. They perform rescue operations, operate firefighting equipment, and provide medical assistance when needed. Courage, teamwork, and the ability to stay calm under pressure are essential qualities for this role.","Army (MOS): 12M (Firefighter)
 Marine Corps (MOS): 7051 (Aircraft Rescue and Firefighting)
-Navy (Rating): DC (Damage Controlman) ñ specializes in shipboard firefighting
+Navy (Rating): DC (Damage Controlman) ‚Äì specializes in shipboard firefighting
 Air Force (AFSC): 3E7X1 (Fire Protection)
-Coast Guard: No single firefighting rating; DC handles damage control/firefighting tasks",
+Coast Guard: No single firefighting rating; DC handles damage control/firefighting tasks"
 EMT,"Emergency Medical Technicians (EMTs) deliver critical first aid and medical care in urgent situations, often as part of an ambulance crew. They assess patients, stabilize injuries, and transport individuals to healthcare facilities. Quick decision-making, medical knowledge, and compassion are vital to providing lifesaving support in high-pressure environments.","Army (MOS): 68W (Combat Medic Specialist)
 Marine Corps: Typically served by Navy Hospital Corpsmen (HM)
 Navy (Rating): HM (Hospital Corpsman)
 Air Force (AFSC): 4N0X1 (Aerospace Medical Service)
-Coast Guard (Rating): HS (Health Services Technician)",
+Coast Guard (Rating): HS (Health Services Technician)"
 Nurse - RN,"Registered Nurses (RNs) provide patient care, administer medications, and collaborate with doctors and other healthcare professionals to develop treatment plans. They often oversee patient records, offer emotional support, and educate individuals on wellness practices. RNs require strong clinical knowledge, critical thinking, and empathy to deliver comprehensive care.","Army (Officer AOC): 66H (Medical-Surgical Nurse)
 Marine Corps: No direct MOS; relies on Navy Nurse Corps Officers
 Navy (Officer Designator): Nurse Corps (2900 series)
 Air Force (AFSC): 46N3 (Clinical Nurse)
-Coast Guard: Commissioned nurses typically come through the USPHS or Navy Nurse Corps on special assignment",
+Coast Guard: Commissioned nurses typically come through the USPHS or Navy Nurse Corps on special assignment"
 Nurse - LPN,"Licensed Practical Nurses (LPNs) offer basic nursing care under the supervision of RNs and doctors. Their tasks often include monitoring patient health, changing dressings, taking vital signs, and assisting with daily activities. LPNs need solid clinical skills, attention to detail, and compassion to support patient well-being effectively.","Army (MOS): 68C (Practical Nursing Specialist)
 Marine Corps: Relies on Navy Corpsmen or Nurse Corps (no separate MOS)
 Navy (Rating): HM (Hospital Corpsman) with advanced training
 Air Force (AFSC): 4N0X1 (Aerospace Medical Service)
-Coast Guard: HS (Health Services Technician)",
+Coast Guard: HS (Health Services Technician)"
 Graphic Design,"Graphic designers create visual content to communicate messages effectively, utilizing elements like typography, color, and imagery. They develop designs for branding, advertising, websites, and print materials. Creativity, a strong sense of aesthetics, and proficiency with design software are key for producing compelling and cohesive visual media.","Army (MOS): 25M (Multimedia Illustrator)
 Marine Corps (MOS): 4600-series (Combat Camera & Visual Information)
 Navy (Rating): MC (Mass Communication Specialist)
 Air Force (AFSC): 3N0X2 or 3N0X5 (Photojournalist / Broadcast Journalist)
-Coast Guard (Rating): PA (Public Affairs Specialist)",
-Sales,"Sales professionals connect customers with products or services, focusing on building relationships and meeting revenue goals. They identify customer needs, offer suitable solutions, negotiate prices, and ensure a positive buying experience. Strong communication, product knowledge, and the ability to handle objections are crucial for success in sales.","	No direct ìsalesî job exists in the military; similar duties fall under supply, contracting, or retail services on base.
+Coast Guard (Rating): PA (Public Affairs Specialist)"
+Sales,"Sales professionals connect customers with products or services, focusing on building relationships and meeting revenue goals. They identify customer needs, offer suitable solutions, negotiate prices, and ensure a positive buying experience. Strong communication, product knowledge, and the ability to handle objections are crucial for success in sales.","	No direct ‚Äúsales‚Äù job exists in the military; similar duties fall under supply, contracting, or retail services on base.
 Army (MOS): 51C (Acquisition, Logistics, and Technology Contracting NCO)
 Marine Corps (MOS): 3043 (Supply Administration) or 3432 (Finance Technician)
 Navy (Rating): LS (Logistics Specialist)
 Air Force (AFSC): 6C0X1 (Contracting)
-Coast Guard (Rating): SK (Storekeeper)",
-Influencer*,"Influencers leverage social media platforms to create content, engage audiences, and collaborate with brands. They often specialize in nichesósuch as beauty, fitness, travel, or gamingóand rely on authenticity and consistent posting to grow their following. Strong personal branding, creativity, and an understanding of marketing trends are essential for building and monetizing their platforms.","No direct ìinfluencerî specialty exists; comparable roles may focus on public affairs or social media.
+Coast Guard (Rating): SK (Storekeeper)"
+Influencer*,"Influencers leverage social media platforms to create content, engage audiences, and collaborate with brands. They often specialize in niches‚Äîsuch as beauty, fitness, travel, or gaming‚Äîand rely on authenticity and consistent posting to grow their following. Strong personal branding, creativity, and an understanding of marketing trends are essential for building and monetizing their platforms.","No direct ‚Äúinfluencer‚Äù specialty exists; comparable roles may focus on public affairs or social media.
 Army (MOS): 46Q (Public Affairs Specialist) or 25V (Combat Documentation/Production)
-Marine Corps (MOS): 4500ñ4600 series (Public Affairs / Combat Camera)
+Marine Corps (MOS): 4500‚Äì4600 series (Public Affairs / Combat Camera)
 Navy (Rating): MC (Mass Communication Specialist)
 Air Force (AFSC): 3N0X2 or 3N0X5 (Public Affairs)
-Coast Guard (Rating): PA (Public Affairs Specialist)",
+Coast Guard (Rating): PA (Public Affairs Specialist)"
 Mechanic,"Mechanics diagnose and repair motor vehicles, engines, and mechanical systems. They use diagnostic tools, test parts, and perform routine maintenance to ensure the safety and efficiency of cars, trucks, or specialized equipment. Technical expertise, manual dexterity, and attention to detail are essential for identifying issues and carrying out repairs successfully.","Army (MOS): 91B (Wheeled Vehicle Mechanic), others in 91-series
 Marine Corps (MOS): 3521 (Automotive Maintenance Technician)
-Navy (Ratings): EN (Engineman), MM (Machinistís Mate), AD (Aviation Machinistís Mate)
+Navy (Ratings): EN (Engineman), MM (Machinist‚Äôs Mate), AD (Aviation Machinist‚Äôs Mate)
 Air Force (AFSC): 2T3X1 (Vehicle Maintenance) or 2A6X* (Aerospace Maintenance)
-Coast Guard (Rating): MK (Machinery Technician)",
-Teacher,"Teachers develop lesson plans, instruct students, and evaluate academic progress, aiming to cultivate knowledge and critical thinking. They adapt teaching methods to suit different learning styles and manage classroom dynamics. Patience, strong communication skills, and a passion for education are crucial for guiding and inspiring students effectively.","	Formal ìteacherî roles are typically additional duties/instructor billets.
+Coast Guard (Rating): MK (Machinery Technician)"
+Teacher,"Teachers develop lesson plans, instruct students, and evaluate academic progress, aiming to cultivate knowledge and critical thinking. They adapt teaching methods to suit different learning styles and manage classroom dynamics. Patience, strong communication skills, and a passion for education are crucial for guiding and inspiring students effectively.","	Formal ‚Äúteacher‚Äù roles are typically additional duties/instructor billets.
 Army: Instructor skill identifier, Drill Sergeant duty
 Marine Corps: Instructor or Drill Instructor (DI) billets
 Navy: Instructor NEC (Navy Enlisted Classification) after qualifications
 Air Force (AFSC): 8T000 (Professional Military Education Instructor)
-Coast Guard: Instructor billets exist but are not a distinct rating",
+Coast Guard: Instructor billets exist but are not a distinct rating"
 Accountant,"Accountants handle financial records, prepare reports, and ensure compliance with tax regulations. They analyze budgets, monitor expenditures, and advise individuals or organizations on financial decisions. Attention to detail, numerical proficiency, and a strong understanding of financial regulations are necessary for maintaining accurate and transparent accounting practices.","Army (MOS): 36B (Financial Management Technician)
 Marine Corps (MOS): 3451 (Financial Management Resource Analyst)
 Navy (Rating): Functions once under DK (Disbursing Clerk) merged into PS (Personnel Specialist)
 Air Force (AFSC): 6F0X1 (Financial Management & Comptroller)
-Coast Guard: Typically handled by YN (Yeoman) or SK (Storekeeper); no exclusive accountant rating",
-Attorney,"Attorneys represent clients in legal matters, providing counsel, preparing legal documents, and advocating in courts or negotiations. They interpret laws, conduct research, and develop strategies to defend or advance their clientsí interests. Strong analytical skills, persuasive communication, and a deep knowledge of legal precedents are vital in this profession.","	Army (Branch/Officer Specialty): 27A (Judge Advocate Generalís Corps Officer)
+Coast Guard: Typically handled by YN (Yeoman) or SK (Storekeeper); no exclusive accountant rating"
+Attorney,"Attorneys represent clients in legal matters, providing counsel, preparing legal documents, and advocating in courts or negotiations. They interpret laws, conduct research, and develop strategies to defend or advance their clients‚Äô interests. Strong analytical skills, persuasive communication, and a deep knowledge of legal precedents are vital in this profession.","	Army (Branch/Officer Specialty): 27A (Judge Advocate General‚Äôs Corps Officer)
 Marine Corps (MOS): 4402 (Judge Advocate)
 Navy (Officer Designator): 250X (Judge Advocate General Corps Officer)
 Air Force (AFSC): 51JX (Judge Advocate)
-Coast Guard: Commissioned officers in the Coast Guard JAG program",
+Coast Guard: Commissioned officers in the Coast Guard JAG program"
 Information Technology,"IT professionals design, implement, and maintain computer systems and networks, ensuring security and efficiency. Their roles can span hardware troubleshooting, software development, cybersecurity, and support services. Problem-solving skills, technical expertise, and adaptability are key to keeping technology infrastructures operating smoothly.","Army (MOS): 25B (Information Technology Specialist) among other 25-series roles
 Marine Corps (MOS): 06XX (Communications); specifically 0651 (Cyber Network Operator), 0671 (Data Systems Administrator)
 Navy (Rating): IT (Information Systems Technician)
 Air Force (AFSC): 3D0X2 (Cyber Systems Operations) or 3D1X2 (Cyber Transport Systems)
-Coast Guard (Rating): IT (Information Systems Technician)",
+Coast Guard (Rating): IT (Information Systems Technician)"
 Architecture/Engineer,"Architects and Engineers collaborate to design, plan, and oversee the construction of buildings and infrastructure. They create blueprints, conduct feasibility studies, and ensure that structures meet safety regulations and functional requirements. Strong technical knowledge, creative problem-solving, and attention to detail drive innovation and efficiency in the built environment.","Army (Officer Branch): 12A (Engineer Officer); specialized engineering roles in separate AOCs
 Marine Corps (MOS): 1302 (Combat Engineer Officer)
 Navy (Officer Community): CEC (Civil Engineer Corps)
 Air Force (AFSC): 32EX (Civil Engineer)
-Coast Guard: Civil Engineering Officers manage facilities (not an enlisted rating)",
+Coast Guard: Civil Engineering Officers manage facilities (not an enlisted rating)"
 Social Services,"Social service professionals support individuals, families, and communities by providing resources, counseling, and advocacy. They often address challenges like mental health, housing, and substance abuse, working alongside government agencies or non-profit organizations. Empathy, active listening, and a commitment to improving lives are essential traits in this field.","Army: 68X (Behavioral Health Specialist, enlisted), 73A/73B (Social Work/Clinical Psych, officers)
 Marine Corps: Typically relies on Navy Medical Service Corps officers or Chaplains
 Navy (Officer Designator): Social Worker (Medical Service Corps); no enlisted social services rating
 Air Force (AFSC): 4C0X1 (Mental Health Service, enlisted), 42SX (Social Worker, officer)
-Coast Guard: HS (Health Services Technician) or Chaplain assistance; no direct ìsocial workerî rating",
+Coast Guard: HS (Health Services Technician) or Chaplain assistance; no direct ‚Äúsocial worker‚Äù rating"
 Food Service,"Food service workers prepare, cook, and serve meals in settings like restaurants, cafeterias, and catering companies. Their duties can include menu planning, food safety, customer service, and maintaining a clean environment. A passion for hospitality, teamwork, and culinary know-how helps ensure a positive dining experience for customers.","Army (MOS): 92G (Culinary Specialist)
 Marine Corps (MOS): 3381 (Food Service Specialist)
 Navy (Rating): CS (Culinary Specialist)
 Air Force (AFSC): 3F1X1 (Services, includes food service)
-Coast Guard (Rating): CS (Culinary Specialist)",
-,,,
-,,,
-,,,
-,,,
-,,,
+Coast Guard (Rating): CS (Culinary Specialist)"
