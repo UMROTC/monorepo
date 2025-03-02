@@ -420,7 +420,7 @@ print("Script complete.")
 from weasyprint import HTML  # for PDF conversion
 
 # Load Profession Data (for job descriptions)
-profession_data_path = repo_root / 'app-one' / 'data' / 'input' / 'Profession_Data.csv'
+profession_data_path = repo_root / 'app-two' / 'data' / 'input' / 'Profession_Data.csv'
 try:
     profession_df = pd.read_csv(profession_data_path, encoding='cp1252')
 except Exception as e:
