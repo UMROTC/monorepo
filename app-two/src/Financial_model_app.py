@@ -243,7 +243,6 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
 
     return monthly_financials
 
-
 # Apply the calculation function to each participant (using participant_df)
 participant_df["Net Worth Over Time"] = participant_df.apply(
     lambda row: calculate_monthly_financials(row, skill_df, gi_bill_df),
@@ -414,3 +413,164 @@ except Exception as e:
 st.plotly_chart(fig)
 
 print("Script complete.")
+
+# -------------------------------------------------------------------------
+# PDF Report Generation Section (Appended)
+# -------------------------------------------------------------------------
+from weasyprint import HTML  # for PDF conversion
+
+# Load Profession Data (for job descriptions)
+profession_data_path = repo_root / 'app-one' / 'data' / 'input' / 'Profession Data.csv'
+try:
+    profession_df = pd.read_csv(profession_data_path, encoding='cp1252')
+except Exception as e:
+    st.error(f"Error loading Profession Data file: {e}")
+    st.stop()
+
+def generate_pair_report(c_row, m_row):
+    """
+    Generates an HTML report for a civilian (c_row) and military (m_row) participant pair.
+    This report includes:
+      - Profession and job descriptions (from Profession Data)
+      - Lifestyle decisions and costs
+      - A bar chart comparing net worth at 20 years (month 240)
+    """
+    # Retrieve profession and job descriptions
+    profession = c_row.get("Profession", "").strip()
+    prof_match = profession_df[profession_df["Profession"].str.strip().str.lower() == profession.lower()]
+    if not prof_match.empty:
+        prof_row = prof_match.iloc[0]
+        civilian_desc = prof_row.get("Civilian Description", "Description not available.")
+        military_desc = prof_row.get("Military Description", "Description not available.")
+    else:
+        civilian_desc = "Description not available."
+        military_desc = "Description not available."
+    
+    # Retrieve lifestyle details
+    c_lifestyle = {
+        "Lifestyle Decisions": c_row.get("Lifestyle Decisions", "N/A"),
+        "Lifestyle Cost": c_row.get("Lifestyle Cost", "N/A")
+    }
+    m_lifestyle = {
+        "Lifestyle Decisions": m_row.get("Lifestyle Decisions", "N/A"),
+        "Lifestyle Cost": m_row.get("Lifestyle Cost", "N/A")
+    }
+    
+    # Extract net worth at 20 years (month 240) for both participants
+    def get_networth_240(row):
+        nw_list = row.get("Net Worth Over Time", [])
+        if len(nw_list) >= 240:
+            return nw_list[239]["Net Worth"]
+        return None
+    c_networth_240 = get_networth_240(c_row)
+    m_networth_240 = get_networth_240(m_row)
+    
+    # Build a simple bar chart using Plotly
+    chart_data = {"Name": [], "Net Worth": []}
+    if c_networth_240 is not None:
+        chart_data["Name"].append(c_row.get("Name", ""))
+        chart_data["Net Worth"].append(c_networth_240)
+    if m_networth_240 is not None:
+        chart_data["Name"].append(m_row.get("Name", ""))
+        chart_data["Net Worth"].append(m_networth_240)
+    chart_df = pd.DataFrame(chart_data)
+    chart_fig = px.bar(
+        chart_df,
+        x="Name",
+        y="Net Worth",
+        title="Net Worth Comparison at 20 Years",
+        labels={"Net Worth": "Net Worth ($)", "Name": "Participant"}
+    )
+    chart_html = chart_fig.to_html(full_html=False, include_plotlyjs='cdn')
+    
+    # Build HTML report string
+    report_html = f"""
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Financial Report: {c_row.get("Name", "")} vs. {m_row.get("Name", "")}</title>
+        <style>
+          body {{
+            font-family: Arial, sans-serif;
+            margin: 20px;
+          }}
+          .top-section {{
+            margin-bottom: 20px;
+          }}
+          .lifestyle {{
+            margin-bottom: 20px;
+          }}
+          .chart {{
+            margin-top: 30px;
+          }}
+        </style>
+      </head>
+      <body>
+        <div class="top-section">
+          <h1>Financial Report: {c_row.get("Name", "")} vs. {m_row.get("Name", "")}</h1>
+          <h2>Profession: {profession}</h2>
+          <p><strong>Civilian Description:</strong> {civilian_desc}</p>
+          <p><strong>Military Description:</strong> {military_desc}</p>
+        </div>
+        <div class="lifestyle">
+          <h3>Lifestyle Details</h3>
+          <p><strong>{c_row.get("Name", "")}:</strong> Decisions: {c_lifestyle.get("Lifestyle Decisions", "N/A")}, Cost: {c_lifestyle.get("Lifestyle Cost", "N/A")}</p>
+          <p><strong>{m_row.get("Name", "")}:</strong> Decisions: {m_lifestyle.get("Lifestyle Decisions", "N/A")}, Cost: {m_lifestyle.get("Lifestyle Cost", "N/A")}</p>
+        </div>
+        <div class="chart">
+          {chart_html}
+        </div>
+      </body>
+    </html>
+    """
+    return report_html
+
+def generate_combined_pdf_report(report_html_list, pdf_output_path):
+    """
+    Combines a list of HTML report strings into a single PDF file.
+    Each report is separated by a page break.
+    """
+    combined_html = """
+    <html>
+      <head>
+         <meta charset="utf-8">
+         <style>
+           @page { size: A4; margin: 1cm; }
+           .page-break { page-break-after: always; }
+         </style>
+      </head>
+      <body>
+    """
+    for report in report_html_list:
+        combined_html += report + '<div class="page-break"></div>'
+    combined_html += "</body></html>"
+    
+    HTML(string=combined_html).write_pdf(str(pdf_output_path))
+    print(f"Combined PDF report saved to: {pdf_output_path}")
+
+# Loop through participant_df to generate reports for each valid participant pair.
+all_reports = []
+for index, row in participant_df.iterrows():
+    name = row.get("Name", "").strip()
+    # Skip if this row is already a military entry (assuming naming convention)
+    if name.endswith("-mil"):
+        continue
+    mil_name = name + "-mil"
+    mil_rows = participant_df[participant_df["Name"].str.strip() == mil_name]
+    if mil_rows.empty:
+        print(f"No military counterpart found for {name}. Skipping report generation for this pair.")
+        continue
+    mil_row = mil_rows.iloc[0]
+    report_html = generate_pair_report(row, mil_row)
+    all_reports.append(report_html)
+    # Optionally, save individual HTML files:
+    # individual_report_path = current_dir / f"report_{name}.html"
+    # with open(individual_report_path, "w", encoding="utf-8") as f:
+    #     f.write(report_html)
+    # print(f"Generated report for {name} and {mil_name}: {individual_report_path}")
+
+# Define the PDF output path (same output folder as before)
+pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf"
+generate_combined_pdf_report(all_reports, pdf_output_path)
+
+st.write(f"Combined PDF report generated at: {pdf_output_path}")
