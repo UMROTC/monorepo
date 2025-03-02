@@ -195,7 +195,7 @@ def save_participant_data(data_frame, worksheet):
         rows_to_add = data_frame.values.tolist()
         # Since we're only appending a single row at a time, pick row 0
         worksheet.append_row(rows_to_add[0], value_input_option="RAW")
-        st.success("Your budget has been submitted and saved to Google Sheets successfully!")
+        st.success("Your budget has been submitted and saved successfully!")
     except Exception as e:
         st.error(f"Failed to save participant data to Google Sheets: {e}")
 
@@ -395,7 +395,7 @@ def main():
     if remaining_budget > 0:
         remaining_budget_message.warning(f"You have ${remaining_budget:,.2f} left.")
     elif remaining_budget == 0:
-        remaining_budget_message.success("You have balanced your budget perfectly!")
+        remaining_budget_message.success("You have balanced your budget!")
     else:
         remaining_budget_message.error(f"You have overspent by ${-remaining_budget:,.2f}!")
 
