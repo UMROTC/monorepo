@@ -422,7 +422,8 @@ from weasyprint import HTML  # for PDF conversion
 # Load Profession Data (for job descriptions)
 profession_data_path = repo_root / 'app-two' / 'data' / 'input' / 'Profession_Data.csv'
 try:
-    profession_df = pd.read_csv(profession_data_path, encoding='latin1')
+    # Use utf-8-sig to handle BOM characters
+    profession_df = pd.read_csv(profession_data_path, encoding='utf-8-sig')
     # Normalize column names: strip whitespace and convert to lowercase.
     profession_df.columns = [col.strip().lower() for col in profession_df.columns]
     st.write("Profession Data columns:", profession_df.columns.tolist())
@@ -477,8 +478,8 @@ def generate_pair_report(c_row, m_row):
 
     if not prof_match.empty:
         prof_row = prof_match.iloc[0]
-        civilian_desc = prof_row.get("civilian description", "Description not available.")
-        military_desc = prof_row.get("military description", "Description not available.")
+        civilian_desc = prof_row.get("description", "Description not available.")
+        military_desc = prof_row.get("military equivalent", "Description not available.")
     else:
         civilian_desc = "Description not available."
         military_desc = "Description not available."
@@ -661,3 +662,4 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
