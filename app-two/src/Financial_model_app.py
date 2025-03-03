@@ -423,9 +423,11 @@ from weasyprint import HTML  # for PDF conversion
 profession_data_path = repo_root / 'app-two' / 'data' / 'input' / 'Profession_Data.csv'
 try:
     profession_df = pd.read_csv(profession_data_path, encoding='latin1')
+    profession_df.columns = profession_df.columns.str.strip().str.lower()
 except Exception as e:
     st.error(f"Error loading Profession Data file: {e}")
     st.stop()
+
 
 def get_common_info(row, skill_df):
     """Extract professional details from skill_df for a given participant row."""
@@ -469,11 +471,13 @@ def generate_pair_report(c_row, m_row):
     
     # Retrieve job descriptions from Profession_Data (match by Profession)
     profession = c_row.get("Profession", "").strip()
-    prof_match = profession_df[profession_df["Profession"].str.strip().str.lower() == profession.lower()]
+    prof_match = profession_df[profession_df["profession"].str.strip().str.lower() == profession.lower()]
+
     if not prof_match.empty:
         prof_row = prof_match.iloc[0]
-        civilian_desc = prof_row.get("Civilian Description", "Description not available.")
-        military_desc = prof_row.get("Military Description", "Description not available.")
+        civilian_desc = prof_row.get("civilian description", "Description not available.")
+        military_desc = prof_row.get("military description", "Description not available.")
+
     else:
         civilian_desc = "Description not available."
         military_desc = "Description not available."
