@@ -437,20 +437,24 @@ def get_common_info(row, skill_df):
     profession = row.get("Profession", "").strip()
     skill_subset = skill_df[skill_df["Profession"].str.strip() == profession]
     if skill_subset.empty:
-        return {"Profession": "N/A", "Average Salary": "N/A", "Years of School": "N/A", "School Cost": "N/A", "Savings During School": "N/A"}
+        return {"Profession": "N/A", "Average Salary": "N/A", "Years of School": "N/A", "School Cost": "N/A"}
     fin_row = skill_subset.iloc[0]
     try:
         months_school_val = int(fin_row.get("Months School", 0))
     except Exception:
         months_school_val = 0
-    # Optionally, if a "School Cost" column exists, use it.
     school_cost = fin_row.get("School Cost", "N/A")
+    avg_salary = fin_row.get("Average Salary", "N/A")
+    try:
+        avg_salary = float(avg_salary)
+        avg_salary = f"${avg_salary:,.0f}"
+    except Exception:
+        pass
     return {
         "Profession": fin_row.get("Profession", "N/A"),
-        "Average Salary": fin_row.get("Average Salary", "N/A"),
+        "Average Salary": avg_salary,
         "Years of School": f"{float(months_school_val)/12:.1f}" if months_school_val else "N/A",
-        "School Cost": school_cost,
-        "Savings During School": fin_row.get("Monthly Savings in School", "N/A")
+        "School Cost": school_cost
     }
 
 def get_networth_at(row, month):
@@ -465,9 +469,9 @@ def generate_pair_report(c_row, m_row):
     Generates an HTML report for a civilian (c_row) and military (m_row) participant pair.
     Layout based on the provided PDF:
       - Header with professional details from Skillset_cost_worksheet_csv.
-      - Lifestyle summary table.
-      - A net worth chart using values at 2025 (month 1), 2035 (month 120) and 2045 (month 240).
+      - A net worth chart using values at 2025 (month 1), 2035 (month 120), and 2045 (month 240) for both participants.
       - Profession description (civilian) and military counterpart roles from Profession_Data.
+      - A table with lifestyle decisions and costs displayed along the bottom of the page.
     """
     # Retrieve professional details from skill_df (for the civilian row)
     common_info = get_common_info(c_row, skill_df)
@@ -475,7 +479,6 @@ def generate_pair_report(c_row, m_row):
     # Retrieve job descriptions from Profession_Data (match by Profession)
     profession = c_row.get("Profession", "").strip()
     prof_match = profession_df[profession_df["profession"].str.strip().str.lower() == profession.lower()]
-
     if not prof_match.empty:
         prof_row = prof_match.iloc[0]
         civilian_desc = prof_row.get("description", "Description not available.")
@@ -528,13 +531,12 @@ def generate_pair_report(c_row, m_row):
         labels={"x": "Year", "y": "Net Worth ($)"}
     )
     chart_fig.add_scatter(x=years, y=m_values, mode="lines+markers", name=m_row.get("Name", ""))
-    # Optionally adjust the y-axis range based on data values.
     min_val = min([v for v in c_values + m_values if v is not None], default=0)
     max_val = max([v for v in c_values + m_values if v is not None], default=0)
     chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
     chart_html = chart_fig.to_html(full_html=False, include_plotlyjs='cdn')
     
-    # Build the HTML report string using a layout similar to your provided PDF.
+    # Build the HTML report string with the lifestyle table at the bottom.
     report_html = f"""
     <html>
       <head>
@@ -558,15 +560,12 @@ def generate_pair_report(c_row, m_row):
             font-size: 18px;
           }}
           .professional-details {{
-            margin-bottom: 20px;
             text-align: center;
+            margin-bottom: 20px;
           }}
           .professional-details p {{
             margin: 2px;
             font-size: 14px;
-          }}
-          .lifestyle-section {{
-            margin-bottom: 20px;
           }}
           .chart-section {{
             margin-bottom: 20px;
@@ -574,9 +573,15 @@ def generate_pair_report(c_row, m_row):
           .description-section {{
             margin-top: 30px;
             font-size: 12px;
+            margin-bottom: 20px;
           }}
           .description-section h3 {{
             margin-bottom: 5px;
+          }}
+          .lifestyle-section {{
+            margin-top: 30px;
+            font-size: 12px;
+            text-align: center;
           }}
         </style>
       </head>
@@ -589,12 +594,6 @@ def generate_pair_report(c_row, m_row):
         <div class="professional-details">
           <p>Years of School: {common_info.get("Years of School")}</p>
           <p>Average Cost of School: {common_info.get("School Cost")}</p>
-          <p>Savings During School: {common_info.get("Savings During School")}</p>
-        </div>
-        <!-- Lifestyle Summary -->
-        <div class="lifestyle-section">
-          <h3>Summary of Lifestyle Choices</h3>
-          {lifestyle_table_html}
         </div>
         <!-- Net Worth Chart -->
         <div class="chart-section">
@@ -606,6 +605,11 @@ def generate_pair_report(c_row, m_row):
           <p>{civilian_desc}</p>
           <h3>Military Equivalent</h3>
           <p>{military_desc}</p>
+        </div>
+        <!-- Lifestyle Summary Table at the Bottom -->
+        <div class="lifestyle-section">
+          <h3>Summary of Lifestyle Choices</h3>
+          {lifestyle_table_html}
         </div>
       </body>
     </html>
@@ -662,4 +666,5 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
