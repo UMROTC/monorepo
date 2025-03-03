@@ -431,7 +431,6 @@ except Exception as e:
     st.error(f"Error loading Profession Data file: {e}")
     st.stop()
 
-
 def get_common_info(row, skill_df):
     """Extract professional details from skill_df for a given participant row."""
     profession = row.get("Profession", "").strip()
@@ -443,13 +442,20 @@ def get_common_info(row, skill_df):
         months_school_val = int(fin_row.get("Months School", 0))
     except Exception:
         months_school_val = 0
+    # Retrieve School Cost and format as dollars if possible.
     school_cost = fin_row.get("School Cost", "N/A")
+    try:
+        school_cost_val = float(school_cost)
+        school_cost = f"${school_cost_val:,.0f}"
+    except Exception:
+        pass
     avg_salary = fin_row.get("Average Salary", "N/A")
     try:
         avg_salary = float(avg_salary)
         avg_salary = f"${avg_salary:,.0f}"
     except Exception:
         pass
+
     return {
         "Profession": fin_row.get("Profession", "N/A"),
         "Average Salary": avg_salary,
@@ -469,7 +475,7 @@ def generate_pair_report(c_row, m_row):
     Generates an HTML report for a civilian (c_row) and military (m_row) participant pair.
     Layout based on the provided PDF:
       - Header with professional details from Skillset_cost_worksheet_csv.
-      - A net worth chart using values at 2025 (month 1), 2035 (month 120), and 2045 (month 240) for both participants.
+      - A net worth chart using values at 2024 (month 1), 2035 (month 120) and 2045 (month 240) for both participants.
       - Profession description (civilian) and military counterpart roles from Profession_Data.
       - A table with lifestyle decisions and costs displayed along the bottom of the page.
     """
@@ -479,6 +485,7 @@ def generate_pair_report(c_row, m_row):
     # Retrieve job descriptions from Profession_Data (match by Profession)
     profession = c_row.get("Profession", "").strip()
     prof_match = profession_df[profession_df["profession"].str.strip().str.lower() == profession.lower()]
+
     if not prof_match.empty:
         prof_row = prof_match.iloc[0]
         civilian_desc = prof_row.get("description", "Description not available.")
@@ -518,8 +525,9 @@ def generate_pair_report(c_row, m_row):
     </table>
     """
     
-    # Build a net worth line chart using Plotly for 2025, 2035, and 2045.
-    years = [2025, 2035, 2045]
+    # Build a net worth line chart using Plotly for 2024, 2035, and 2045.
+    # (Assuming month 1 corresponds to 2024, month 120 to 2035, and month 240 to 2045.)
+    years = [2024, 2035, 2045]
     c_values = [get_networth_at(c_row, 1), get_networth_at(c_row, 120), get_networth_at(c_row, 240)]
     m_values = [get_networth_at(m_row, 1), get_networth_at(m_row, 120), get_networth_at(m_row, 240)]
     
@@ -666,5 +674,6 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
 
