@@ -420,70 +420,18 @@ print("Script complete.")
 import base64
 import io
 from weasyprint import HTML  # for PDF conversion
-
-# Load Profession Data (for job descriptions)
-profession_data_path = repo_root / 'app-two' / 'data' / 'input' / 'Profession_Data.csv'
-try:
-    # Use utf-8-sig to handle BOM characters
-    profession_df = pd.read_csv(profession_data_path, encoding='utf-8-sig')
-    # Normalize column names: strip whitespace and convert to lowercase.
-    profession_df.columns = [col.strip().lower() for col in profession_df.columns]
-    st.write("Profession Data columns:", profession_df.columns.tolist())
-except Exception as e:
-    st.error(f"Error loading Profession Data file: {e}")
-    st.stop()
-
-# Debug: Print participant data columns to verify field names.
-st.write("Participant Data columns:", participant_df.columns.tolist())
-
-def get_common_info(row, skill_df):
-    """Extract professional details from skill_df for a given participant row."""
-    profession = row.get("Profession", "").strip()
-    skill_subset = skill_df[skill_df["Profession"].str.strip() == profession]
-    if skill_subset.empty:
-        return {"Profession": "N/A", "Average Salary": "N/A", "Years of School": "N/A", "School Cost": "N/A"}
-    fin_row = skill_subset.iloc[0]
-    try:
-        months_school_val = int(fin_row.get("Months School", 0))
-    except Exception:
-        months_school_val = 0
-    # Retrieve School Cost and format as dollars if possible.
-    school_cost = fin_row.get("School Cost", "N/A")
-    try:
-        school_cost_val = float(school_cost)
-        school_cost = f"${school_cost_val:,.0f}"
-    except Exception:
-        pass
-    avg_salary = fin_row.get("Average Salary", "N/A")
-    try:
-        avg_salary = float(avg_salary)
-        avg_salary = f"${avg_salary:,.0f}"
-    except Exception:
-        pass
-    return {
-        "Profession": fin_row.get("Profession", "N/A"),
-        "Average Salary": avg_salary,
-        "Years of School": f"{float(months_school_val)/12:.1f}" if months_school_val else "N/A",
-        "School Cost": school_cost
-    }
-
-def get_networth_at(row, month):
-    """Helper: Return the net worth for a participant at the specified month (1-indexed)."""
-    nw_list = row.get("Net Worth Over Time", [])
-    if len(nw_list) >= month:
-        return nw_list[month - 1]["Net Worth"]
-    return None
+import plotly.express as px
 
 def get_chart_image(chart_fig):
     """
     Renders the Plotly figure to a PNG image using kaleido,
-    encodes it in base64, and returns an HTML <img> tag.
+    encodes it in base64, and returns an HTML <img> tag with reduced size.
     """
     try:
-        # Export the figure to PNG bytes.
         img_bytes = chart_fig.to_image(format="png")
         encoded = base64.b64encode(img_bytes).decode("utf-8")
-        return f'<img src="data:image/png;base64,{encoded}" alt="Net Worth Chart" style="max-width:100%;" />'
+        # Set max-width to 70% to reduce the size by approximately 30%.
+        return f'<img src="data:image/png;base64,{encoded}" alt="Net Worth Chart" style="max-width:70%;" />'
     except Exception as e:
         st.error(f"Error generating chart image: {e}")
         return "<p>Error generating chart image.</p>"
@@ -492,10 +440,11 @@ def generate_pair_report(c_row, m_row):
     """
     Generates an HTML report for a civilian (c_row) and military (m_row) participant pair.
     Layout based on the provided PDF:
-      - Header with professional details from Skillset_cost_worksheet_csv.
-      - A net worth chart using values at 2025 (month 1), 2035 (month 120), and 2045 (month 240) for both participants.
+      - Title: "(Participant's Name) Financial Projection"
+      - Below that, professional details (profession, annual salary, years of school, school cost) in the same font size.
+      - A net worth chart using values at 2024 (month 1), 2035 (month 120), and 2045 (month 240) for both participants.
       - Profession description (civilian) and military counterpart roles from Profession_Data.
-      - A table with lifestyle decisions and costs displayed along the bottom of the page.
+      - A table with lifestyle decisions and costs displayed along the bottom.
     """
     # Retrieve professional details from skill_df (for the civilian row)
     common_info = get_common_info(c_row, skill_df)
@@ -521,7 +470,7 @@ def generate_pair_report(c_row, m_row):
         "Lifestyle Cost": m_row.get("Lifestyle Cost", "N/A")
     }
     
-    # Create a table (HTML) for Lifestyle Summary
+    # Create a table (HTML) for Lifestyle Summary displayed at the bottom.
     lifestyle_table_html = f"""
     <table style="width:100%; border-collapse: collapse;" border="1">
       <tr>
@@ -559,15 +508,15 @@ def generate_pair_report(c_row, m_row):
     min_val = min([v for v in c_values + m_values if v is not None], default=0)
     max_val = max([v for v in c_values + m_values if v is not None], default=0)
     chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
-    # Instead of to_html (which requires JS), generate a static image.
+    # Render chart as a static image.
     chart_html = get_chart_image(chart_fig)
     
-    # Build the HTML report string with the lifestyle table at the bottom.
+    # Build the HTML report string.
     report_html = f"""
     <html>
       <head>
         <meta charset="utf-8">
-        <title>Financial Projection Summary: {c_row.get("Name", "")} vs. {m_row.get("Name", "")}</title>
+        <title>{c_row.get("Name", "")} Financial Projection</title>
         <style>
           body {{
             font-family: Arial, sans-serif;
@@ -581,20 +530,14 @@ def generate_pair_report(c_row, m_row):
             margin: 0;
             font-size: 24px;
           }}
-          .header h2 {{
-            margin: 5px 0;
-            font-size: 18px;
-          }}
           .professional-details {{
             text-align: center;
             margin-bottom: 20px;
-          }}
-          .professional-details p {{
-            margin: 2px;
-            font-size: 14px;
+            font-size: 18px;
           }}
           .chart-section {{
             margin-bottom: 20px;
+            text-align: center;
           }}
           .description-section {{
             margin-top: 30px;
@@ -612,12 +555,14 @@ def generate_pair_report(c_row, m_row):
         </style>
       </head>
       <body>
-        <!-- Header with Professional Details -->
+        <!-- Title -->
         <div class="header">
-          <h1>{common_info.get("Profession")}</h1>
-          <h2>Annual Salary: {common_info.get("Average Salary")}</h2>
+          <h1>{c_row.get("Name", "")} Financial Projection</h1>
         </div>
+        <!-- Professional Details -->
         <div class="professional-details">
+          <p>{common_info.get("Profession")}</p>
+          <p>Annual Salary: {common_info.get("Average Salary")}</p>
           <p>Years of School: {common_info.get("Years of School")}</p>
           <p>Average Cost of School: {common_info.get("School Cost")}</p>
         </div>
@@ -641,7 +586,6 @@ def generate_pair_report(c_row, m_row):
     </html>
     """
     return report_html
-
 
 def generate_combined_pdf_report(report_html_list, pdf_output_path):
     """
@@ -692,6 +636,7 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
 
 
