@@ -559,10 +559,11 @@ def generate_pair_report(c_row, m_row):
     Layout:
       - Title: "(Participant's Name)'s Financial Projection" (centered)
       - Professional details (left-aligned)
-      - A net worth chart (static image) aligned to the right, moved up by 1.0 inch (from previous -1.5in)
+      - A net worth chart (static image) aligned to the right, moved down by 0.5 inches (margin-top: -1.0in)
       - Profession descriptions for civilian and military with horizontal rules,
-        moved down by 2.25 inches (i.e. an extra 0.5in added to previous 1.75in)
+        moved down by 2.25 inches
       - A two-row lifestyle table for the civilian participant with the table title centered above it
+      - A note at the bottom of the page
     """
     global profession_df
     common_info = get_common_info(c_row, skill_df)
@@ -599,10 +600,17 @@ def generate_pair_report(c_row, m_row):
     min_val = min([v for v in c_values + m_values if v is not None], default=0)
     max_val = max([v for v in c_values + m_values if v is not None], default=0)
     chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
-    # Move the chart down by setting a less negative margin-top (from -1.5in to -1.0in)
+    # Chart section now uses margin-top: -1.0in to move it down by an extra 0.5in from previous
     chart_html = get_chart_image(chart_fig)
     lifestyle_table_html = build_lifestyle_table(c_row)
     name_str = c_row.get("Name", "Participant")
+    # Note text added at bottom of page
+    note_text = (
+        "This sheet depicts a simple net worth calculation that considers only two values - your monthly savings "
+        "compounding at 5% Annually, and your student debt, compounding at 6% Annually. The intent of this sheet is to give you the ability to project how student debt will affect your purchase power in the future. "
+        "Scholarships and grants are great ways to pay for training you will need in your future profession. The Military is one of many employers who will help pay for your training and education for your job. "
+        "If you go straight to work after graduation, the cost associated with that profession represents licensing, tools, and apprenticeships (if any)."
+    )
     report_html = f"""
     <html>
       <head>
@@ -626,7 +634,7 @@ def generate_pair_report(c_row, m_row):
             margin-bottom: 10px;
             font-size: 11px;
           }}
-          /* Chart section moved down by adjusting margin-top from -1.5in to -1.0in */
+          /* Chart section moved down by using margin-top: -1.0in */
           .chart-section {{
             margin-top: -1.0in;
             margin-bottom: 10px;
@@ -664,6 +672,14 @@ def generate_pair_report(c_row, m_row):
             border: 1px solid #000;
             font-size: 10px;
           }}
+          /* Note section at bottom */
+          .note-section {{
+            margin-top: 10px;
+            font-size: 10px;
+            text-align: left;
+            border-top: 1px solid #000;
+            padding-top: 5px;
+          }}
         </style>
       </head>
       <body>
@@ -697,6 +713,10 @@ def generate_pair_report(c_row, m_row):
             <h3>Summary of Lifestyle Choices</h3>
           </div>
           {lifestyle_table_html}
+        </div>
+        <!-- Note Section -->
+        <div class="note-section">
+          <p>{note_text}</p>
         </div>
       </body>
     </html>
@@ -746,6 +766,7 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
 
 
