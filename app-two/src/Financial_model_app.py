@@ -422,99 +422,32 @@ import io
 from weasyprint import HTML  # for PDF conversion
 import plotly.express as px
 
-# --- Load Profession Data in Global Scope ---
-profession_data_path = repo_root / 'app-two' / 'data' / 'input' / 'Profession_Data.csv'
-try:
-    # Use utf-8-sig to handle BOM characters
-    profession_df = pd.read_csv(profession_data_path, encoding='utf-8-sig')
-    # Normalize column names: strip whitespace and convert to lowercase.
-    profession_df.columns = [col.strip().lower() for col in profession_df.columns]
-    st.write("Profession Data columns:", profession_df.columns.tolist())
-except Exception as e:
-    st.error(f"Error loading Profession Data file: {e}")
-    st.stop()
-
-# Define the lifestyle columns: (Display Name, Choice Field, Cost Field)
-lifestyle_columns = [
-    ("Housing", "Housing Choice", "Housing Cost"),
-    ("Transportation", "Transportation Choice", "Transportation Cost"),
-    ("Phone", "Phone Choice", "Phone Cost"),
-    ("Food", "Food Choice", "Food Cost"),
-    ("Leisure", "Leisure Choice", "Leisure Cost"),
-    ("Common Interests", "Common Interest Choice", "Common Interest Cost"),
-    ("Children", "Number of Children", "Children Cost"),
-    ("Who Pays for College", "Who pays for College", ""),
-    ("Health Insurance", "Health Insurance Level", "Health Insurance Cost"),
-    ("Monthly Savings", "Savings Choice", "Monthly Savings"),
-]
-
-# --- Helper Functions ---
-
-def get_common_info(row, skill_df):
-    """Extract professional details from skill_df for a given participant row."""
-    profession = row.get("Profession", "").strip()
-    skill_subset = skill_df[skill_df["Profession"].str.strip() == profession]
-    if skill_subset.empty:
-        return {"Profession": "N/A", "Average Salary": "N/A", "Years of School": "N/A", "School Cost": "N/A"}
-    fin_row = skill_subset.iloc[0]
-    try:
-        months_school_val = int(fin_row.get("Months School", 0))
-    except Exception:
-        months_school_val = 0
-    # Retrieve School Cost and format as dollars if possible.
-    school_cost = fin_row.get("School Cost", "N/A")
-    try:
-        school_cost_val = float(school_cost)
-        school_cost = f"${school_cost_val:,.0f}"
-    except Exception:
-        pass
-    avg_salary = fin_row.get("Average Salary", "N/A")
-    try:
-        avg_salary = float(avg_salary)
-        avg_salary = f"${avg_salary:,.0f}"
-    except Exception:
-        pass
-    return {
-        "Profession": fin_row.get("Profession", "N/A"),
-        "Average Salary": avg_salary,
-        "Years of School": f"{float(months_school_val)/12:.1f}" if months_school_val else "N/A",
-        "School Cost": school_cost
-    }
-
-def get_networth_at(row, month):
-    """Return the net worth for a participant at the specified month (1-indexed)."""
-    nw_list = row.get("Net Worth Over Time", [])
-    if len(nw_list) >= month:
-        return nw_list[month - 1]["Net Worth"]
-    return None
-
-def get_chart_image(chart_fig):
+# ------------------------
+# 1. Format numeric values
+# ------------------------
+def format_as_dollars(value):
     """
-    Renders the Plotly figure to a PNG image using kaleido,
-    encodes it in base64, and returns an HTML <img> tag with increased size
-    aligned to the right margin.
+    Safely convert a value to float and format it in USD, e.g. $12,345.67
+    If conversion fails, return the original string.
     """
     try:
-        img_bytes = chart_fig.to_image(format="png")
-        encoded = base64.b64encode(img_bytes).decode("utf-8")
-        # Set max-width to 60% to enlarge the chart by ~40% from 42%.
-        return (
-            f'<img src="data:image/png;base64,{encoded}" '
-            f'alt="Net Worth Chart" '
-            f'style="max-width:60%; float:right; margin-left:auto; margin-right:0;" />'
-        )
-    except Exception as e:
-        st.error(f"Error generating chart image: {e}")
-        return "<p>Error generating chart image.</p>"
+        # Remove commas before conversion if needed
+        val_float = float(str(value).replace(",", "").strip())
+        return f"${val_float:,.2f}"
+    except:
+        return str(value)
 
+# ------------------------
+# 2. Updated table builder
+# ------------------------
 def build_lifestyle_table(c_row):
     """
     Builds an HTML table with columns for each lifestyle category,
-    but only for the civilian participant (choice and cost).
-    The military participant's rows are omitted.
+    with cell borders and cost values formatted in dollars.
     """
     c_name = c_row.get("Name", "Civilian")
 
+    # Use border="1" and border-collapse to ensure visible cell lines
     table_html = f"""
     <table style="width:100%; border-collapse: collapse;" border="1">
       <thead>
@@ -526,18 +459,19 @@ def build_lifestyle_table(c_row):
         table_html += f"<th>{display_name}</th>"
     table_html += "</tr></thead><tbody>"
 
-    # Row 1: Choice - (Civilian)
+    # Row 1: Choice
     table_html += f"<tr><td>Choice - {c_name}</td>"
     for _, choice_field, _ in lifestyle_columns:
         choice_val = c_row.get(choice_field, "N/A")
         table_html += f"<td>{choice_val}</td>"
     table_html += "</tr>"
 
-    # Row 2: Cost - (Civilian)
+    # Row 2: Cost (formatted as dollars)
     table_html += f"<tr><td>Cost - {c_name}</td>"
     for _, _, cost_field in lifestyle_columns:
         if cost_field:
             cost_val = c_row.get(cost_field, "N/A")
+            cost_val = format_as_dollars(cost_val)  # convert to $X,XXX.XX
         else:
             cost_val = ""
         table_html += f"<td>{cost_val}</td>"
@@ -546,24 +480,34 @@ def build_lifestyle_table(c_row):
     table_html += "</tbody></table>"
     return table_html
 
-# --- Report Generation Functions ---
+# ------------------------
+# 3. Bigger chart & legend
+# ------------------------
+def get_chart_image(chart_fig):
+    """
+    Renders the Plotly figure to a PNG image using kaleido,
+    encodes it in base64, and returns an HTML <img> tag.
+    Chart width increased by ~30% (from 60% to 78%).
+    """
+    try:
+        img_bytes = chart_fig.to_image(format="png")
+        encoded = base64.b64encode(img_bytes).decode("utf-8")
+        return (
+            f'<img src="data:image/png;base64,{encoded}" '
+            f'alt="Net Worth Chart" '
+            f'style="max-width:78%; float:right; margin-left:auto; margin-right:0;" />'
+        )
+    except Exception as e:
+        st.error(f"Error generating chart image: {e}")
+        return "<p>Error generating chart image.</p>"
 
 def generate_pair_report(c_row, m_row):
     """
-    Generates an HTML report for a civilian (c_row) and military (m_row) participant pair.
-    Layout:
-      - Title: "(Participant's Name)'s Financial Projection" (centered)
-      - Professional details (left-aligned, labeled "Profession:", etc.)
-      - A net worth chart (static image) aligned to the right margin
-      - Profession description (civilian) and military equivalent (with horizontal lines below each title)
-      - A two-row lifestyle table for only the civilian participant
+    Generates an HTML report for a civilian (c_row) and a matching
+    military (m_row) participant, with a larger chart and clearer legend.
     """
-    global profession_df  # Ensure global variable is available.
-    
-    # 1. Retrieve professional details from skill_df
+    # -- Retrieve profession details and job descriptions as before --
     common_info = get_common_info(c_row, skill_df)
-
-    # 2. Retrieve job descriptions from Profession_Data
     profession = c_row.get("Profession", "").strip()
     prof_match = profession_df[profession_df["profession"].str.strip().str.lower() == profession.lower()]
     if not prof_match.empty:
@@ -574,7 +518,7 @@ def generate_pair_report(c_row, m_row):
         civilian_desc = "Description not available."
         military_desc = "Description not available."
 
-    # 3. Build the net worth line chart
+    # -- Build a short net worth line chart with two traces (dotted vs. solid) --
     years = [2024, 2035, 2045]
     c_values = [get_networth_at(c_row, 1), get_networth_at(c_row, 120), get_networth_at(c_row, 240)]
     m_values = [get_networth_at(m_row, 1), get_networth_at(m_row, 120), get_networth_at(m_row, 240)]
@@ -586,27 +530,30 @@ def generate_pair_report(c_row, m_row):
         title="Simple Net Worth Over Time",
         labels={"x": "Year", "y": "Net Worth ($)"}
     )
-    # First trace: dotted line
+    # First trace: dotted line (civilian)
     chart_fig.data[0].line.dash = 'dot'
-    chart_fig.data[0].name = c_row.get("Name", "Civilian")
+    chart_fig.data[0].name = f"{c_row.get('Name', 'Civilian')} (Dotted)"
 
-    # Second trace: solid line
+    # Second trace: solid line (military)
     chart_fig.add_scatter(
         x=years,
         y=m_values,
         mode="lines+markers",
-        name=m_row.get("Name", "Military"),
+        name=f"{m_row.get('Name', 'Military')} (Solid)",
         line=dict(dash='solid')
     )
+    # Adjust y-axis range slightly
     min_val = min([v for v in c_values + m_values if v is not None], default=0)
     max_val = max([v for v in c_values + m_values if v is not None], default=0)
     chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
+
+    # Convert chart to HTML image tag
     chart_html = get_chart_image(chart_fig)
 
-    # 4. Build the two-row lifestyle table (only for civilian)
+    # -- Build the lifestyle table (only for civilian) --
     lifestyle_table_html = build_lifestyle_table(c_row)
 
-    # 5. Construct the final HTML
+    # -- Compile final HTML for this pair --
     name_str = c_row.get("Name", "Participant")
     report_html = f"""
     <html>
@@ -668,18 +615,18 @@ def generate_pair_report(c_row, m_row):
         <div class="header">
           <h1>{name_str}'s Financial Projection</h1>
         </div>
-        <!-- Professional Details (left-aligned) -->
+        <!-- Professional Details -->
         <div class="professional-details">
           <p><strong>Profession:</strong> {common_info.get("Profession")}</p>
           <p><strong>Annual Salary:</strong> {common_info.get("Average Salary")}</p>
           <p><strong>Years of School:</strong> {common_info.get("Years of School")}</p>
           <p><strong>Average Cost of School:</strong> {common_info.get("School Cost")}</p>
         </div>
-        <!-- Net Worth Chart (right-aligned) -->
+        <!-- Net Worth Chart -->
         <div class="chart-section">
           {chart_html}
         </div>
-        <!-- Profession Description (left-aligned) -->
+        <!-- Profession Descriptions -->
         <div class="description-section">
           <h3>Profession Description</h3>
           <hr />
@@ -688,7 +635,7 @@ def generate_pair_report(c_row, m_row):
           <hr />
           <p>{military_desc}</p>
         </div>
-        <!-- Lifestyle Table (only civilian participant) -->
+        <!-- Lifestyle Table -->
         <div class="lifestyle-section">
           <h3>Summary of Lifestyle Choices</h3>
           {lifestyle_table_html}
@@ -700,15 +647,15 @@ def generate_pair_report(c_row, m_row):
 
 def generate_combined_pdf_report(report_html_list, pdf_output_path):
     """
-    Combines a list of HTML report strings into a single PDF file.
-    Each report is separated by a page break.
+    Combines a list of HTML report strings into a single PDF file in landscape orientation.
     """
+    # Note: "size: A4 landscape;" sets page orientation to landscape
     combined_html = """
     <html>
       <head>
          <meta charset="utf-8">
          <style>
-           @page { size: A4; margin: 1cm; }
+           @page { size: A4 landscape; margin: 1cm; }
            .page-break { page-break-after: always; }
          </style>
       </head>
@@ -717,37 +664,10 @@ def generate_combined_pdf_report(report_html_list, pdf_output_path):
     for report in report_html_list:
         combined_html += report + '<div class="page-break"></div>'
     combined_html += "</body></html>"
-    
+
     HTML(string=combined_html).write_pdf(str(pdf_output_path))
     print(f"Combined PDF report saved to: {pdf_output_path}")
 
-# --- Main Loop: Generate Reports ---
-
-all_reports = []
-for index, row in participant_df.iterrows():
-    name = row.get("Name", "").strip()
-    # Skip if this row is already a military entry (assuming naming convention ends with "-mil")
-    if name.endswith("-mil"):
-        continue
-    mil_name = name + "-mil"
-    mil_rows = participant_df[participant_df["Name"].str.strip() == mil_name]
-    if mil_rows.empty:
-        print(f"No military counterpart found for {name}. Skipping report generation for this pair.")
-        continue
-    mil_row = mil_rows.iloc[0]
-    report_html = generate_pair_report(row, mil_row)
-    all_reports.append(report_html)
-    # Optionally, save individual HTML files for debugging:
-    # individual_report_path = current_dir / f"report_{name}.html"
-    # with open(individual_report_path, "w", encoding="utf-8") as f:
-    #     f.write(report_html)
-    # print(f"Generated report for {name} and {mil_name}: {individual_report_path}")
-
-# Define the PDF output path (same output folder as before)
-pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf"
-generate_combined_pdf_report(all_reports, pdf_output_path)
-
-st.write(f"Combined PDF report generated at: {pdf_output_path}")
 
 
 
