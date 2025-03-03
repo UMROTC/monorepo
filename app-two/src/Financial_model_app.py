@@ -474,7 +474,6 @@ def get_common_info(row, skill_df):
         months_school_val = int(fin_row.get("Months School", 0))
     except Exception:
         months_school_val = 0
-    # Retrieve School Cost and format as dollars if possible.
     school_cost = fin_row.get("School Cost", "N/A")
     try:
         school_cost_val = float(school_cost)
@@ -560,10 +559,10 @@ def generate_pair_report(c_row, m_row):
     Layout:
       - Title: "(Participant's Name)'s Financial Projection" (centered)
       - Professional details (left-aligned)
-      - A net worth chart (static image) aligned to the right, moved up by 1.5 inches
+      - A net worth chart (static image) aligned to the right, moved up by 1.0 inch (from previous -1.5in)
       - Profession descriptions for civilian and military with horizontal rules,
-        moved down by 1.75 inches
-      - A two-row lifestyle table for the civilian participant
+        moved down by 2.25 inches (i.e. an extra 0.5in added to previous 1.75in)
+      - A two-row lifestyle table for the civilian participant with the table title centered above it
     """
     global profession_df
     common_info = get_common_info(c_row, skill_df)
@@ -600,6 +599,7 @@ def generate_pair_report(c_row, m_row):
     min_val = min([v for v in c_values + m_values if v is not None], default=0)
     max_val = max([v for v in c_values + m_values if v is not None], default=0)
     chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
+    # Move the chart down by setting a less negative margin-top (from -1.5in to -1.0in)
     chart_html = get_chart_image(chart_fig)
     lifestyle_table_html = build_lifestyle_table(c_row)
     name_str = c_row.get("Name", "Participant")
@@ -626,14 +626,14 @@ def generate_pair_report(c_row, m_row):
             margin-bottom: 10px;
             font-size: 11px;
           }}
-          /* Chart section remains moved up by 1.5 inches */
+          /* Chart section moved down by adjusting margin-top from -1.5in to -1.0in */
           .chart-section {{
-            margin-top: -1.5in;
+            margin-top: -1.0in;
             margin-bottom: 10px;
           }}
-          /* Description section moved down by 1.75 inches */
+          /* Description section moved down by 2.25 inches */
           .description-section {{
-            margin-top: 1.75in;
+            margin-top: 2.25in;
             font-size: 11px;
             margin-bottom: 10px;
           }}
@@ -648,8 +648,14 @@ def generate_pair_report(c_row, m_row):
             margin-top: 10px;
             font-size: 11px;
           }}
+          /* Center the table title */
+          .lifestyle-title {{
+            text-align: center;
+            font-size: 12px;
+            margin-bottom: 5px;
+          }}
           table {{
-            margin-top: 10px;
+            margin-top: 0px;
             border-collapse: collapse;
           }}
           th, td {{
@@ -687,7 +693,9 @@ def generate_pair_report(c_row, m_row):
         </div>
         <!-- Lifestyle Table -->
         <div class="lifestyle-section">
-          <h3>Summary of Lifestyle Choices</h3>
+          <div class="lifestyle-title">
+            <h3>Summary of Lifestyle Choices</h3>
+          </div>
           {lifestyle_table_html}
         </div>
       </body>
@@ -738,6 +746,7 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
 
 
