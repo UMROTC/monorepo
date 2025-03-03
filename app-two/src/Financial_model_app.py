@@ -422,6 +422,18 @@ import io
 from weasyprint import HTML  # for PDF conversion
 import plotly.express as px
 
+# --- Load Profession Data in Global Scope ---
+profession_data_path = repo_root / 'app-two' / 'data' / 'input' / 'Profession_Data.csv'
+try:
+    # Use utf-8-sig to handle BOM characters
+    profession_df = pd.read_csv(profession_data_path, encoding='utf-8-sig')
+    # Normalize column names: strip whitespace and convert to lowercase.
+    profession_df.columns = [col.strip().lower() for col in profession_df.columns]
+    st.write("Profession Data columns:", profession_df.columns.tolist())
+except Exception as e:
+    st.error(f"Error loading Profession Data file: {e}")
+    st.stop()
+
 # --- Helper Functions ---
 
 def get_common_info(row, skill_df):
@@ -483,12 +495,13 @@ def generate_pair_report(c_row, m_row):
     Generates an HTML report for a civilian (c_row) and military (m_row) participant pair.
     Layout based on the provided PDF:
       - Title with participant's name and "Financial Projection".
-      - Professional details (profession, annual salary, years of school, school cost)
-        in the same font size.
+      - Professional details (profession, annual salary, years of school, school cost) in the same font size.
       - A net worth chart using values at 2024 (month 1), 2035 (month 120), and 2045 (month 240) for both.
       - Profession description (civilian) and military counterpart roles from Profession_Data.
       - A table with lifestyle decisions and costs displayed along the bottom.
     """
+    global profession_df  # Ensure the global profession_df is accessible here.
+    
     # Retrieve professional details from skill_df (for the civilian row)
     common_info = get_common_info(c_row, skill_df)
     
@@ -535,6 +548,7 @@ def generate_pair_report(c_row, m_row):
     """
     
     # Build a net worth line chart using Plotly for 2024, 2035, and 2045.
+    # (Assuming month 1 corresponds to 2024, month 120 to 2035, and month 240 to 2045.)
     years = [2024, 2035, 2045]
     c_values = [get_networth_at(c_row, 1), get_networth_at(c_row, 120), get_networth_at(c_row, 240)]
     m_values = [get_networth_at(m_row, 1), get_networth_at(m_row, 120), get_networth_at(m_row, 240)]
@@ -678,8 +692,3 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
-
-
-
-
-
