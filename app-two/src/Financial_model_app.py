@@ -434,6 +434,20 @@ except Exception as e:
     st.error(f"Error loading Profession Data file: {e}")
     st.stop()
 
+# Define the lifestyle columns: (Display Name, Choice Field, Cost Field)
+lifestyle_columns = [
+    ("Housing", "Housing Choice", "Housing Cost"),
+    ("Transportation", "Transportation Choice", "Transportation Cost"),
+    ("Phone", "Phone Choice", "Phone Cost"),
+    ("Food", "Food Choice", "Food Cost"),
+    ("Leisure", "Leisure Choice", "Leisure Cost"),
+    ("Common Interests", "Common Interest Choice", "Common Interest Cost"),
+    ("Children", "Number of Children", "Children Cost"),
+    ("Who Pays for College", "Who pays for College", ""),  # If no cost column, leave blank
+    ("Health Insurance", "Health Insurance Level", "Health Insurance Cost"),
+    ("Monthly Savings", "Savings Choice", "Monthly Savings"),
+]
+
 # --- Helper Functions ---
 
 def get_common_info(row, skill_df):
@@ -468,7 +482,7 @@ def get_common_info(row, skill_df):
     }
 
 def get_networth_at(row, month):
-    """Helper: Return the net worth for a participant at the specified month (1-indexed)."""
+    """Return the net worth for a participant at the specified month (1-indexed)."""
     nw_list = row.get("Net Worth Over Time", [])
     if len(nw_list) >= month:
         return nw_list[month - 1]["Net Worth"]
@@ -477,40 +491,81 @@ def get_networth_at(row, month):
 def get_chart_image(chart_fig):
     """
     Renders the Plotly figure to a PNG image using kaleido,
-    encodes it in base64, and returns an HTML <img> tag with reduced size.
+    encodes it in base64, and returns an HTML <img> tag with reduced size
+    aligned to the right margin.
     """
     try:
         img_bytes = chart_fig.to_image(format="png")
         encoded = base64.b64encode(img_bytes).decode("utf-8")
-        # Set max-width to 42% to reduce the size by an additional 40% (from 70%).
-        return f'<img src="data:image/png;base64,{encoded}" alt="Net Worth Chart" style="max-width:42%; display: block; margin-left: 0;" />'
+        # Set max-width to 42% and float right to align at the right margin.
+        return (
+            f'<img src="data:image/png;base64,{encoded}" '
+            f'alt="Net Worth Chart" '
+            f'style="max-width:42%; float:right; margin-left:auto; margin-right:0;" />'
+        )
     except Exception as e:
         st.error(f"Error generating chart image: {e}")
         return "<p>Error generating chart image.</p>"
 
-def get_lifestyle_summary(row):
+def build_lifestyle_table(c_row, m_row):
     """
-    Builds an HTML summary of lifestyle decisions and costs from the participant row.
-    Uses the individual fields provided in the participant data.
+    Builds an HTML table with columns for each lifestyle category,
+    and four rows total:
+      1) Choice - (Civilian participant)
+      2) Cost - (Civilian participant)
+      3) Choice - (Military participant)
+      4) Cost - (Military participant)
     """
-    # Define categories: (Category, Cost Field, Choice Field)
-    categories = [
-        ("Housing", "Housing Cost", "Housing Choice"),
-        ("Transportation", "Transportation Cost", "Transportation Choice"),
-        ("Phone", "Phone Cost", "Phone Choice"),
-        ("Food", "Food Cost", "Food Choice"),
-        ("Leisure", "Leisure Cost", "Leisure Choice"),
-        ("Common Interest", "Common Interest Cost", "Common Interest Choice"),
-        ("Children", "Children Cost", "Number of Children"),
-        ("Health Insurance", "Health Insurance Cost", "Health Insurance Level"),
-        ("Monthly Savings", "Monthly Savings", "Savings Choice")
-    ]
-    summary_lines = []
-    for cat, cost_field, choice_field in categories:
-        cost = row.get(cost_field, "N/A")
-        choice = row.get(choice_field, "N/A")
-        summary_lines.append(f"{cat}: {choice} (Cost: {cost})")
-    return "<br>".join(summary_lines)
+    c_name = c_row.get("Name", "Civilian")
+    m_name = m_row.get("Name", "Military")
+
+    table_html = f"""
+    <table style="width:100%; border-collapse: collapse;" border="1">
+      <thead>
+        <tr style="background-color:#e1e1e1;">
+          <th></th>
+    """
+    # Create a column header for each lifestyle category
+    for display_name, _, _ in lifestyle_columns:
+        table_html += f"<th>{display_name}</th>"
+    table_html += "</tr></thead><tbody>"
+
+    # Row 1: Choice - (Civilian)
+    table_html += f"<tr><td>Choice - {c_name}</td>"
+    for _, choice_field, _ in lifestyle_columns:
+        choice_val = c_row.get(choice_field, "N/A")
+        table_html += f"<td>{choice_val}</td>"
+    table_html += "</tr>"
+
+    # Row 2: Cost - (Civilian)
+    table_html += f"<tr><td>Cost - {c_name}</td>"
+    for _, _, cost_field in lifestyle_columns:
+        if cost_field:
+            cost_val = c_row.get(cost_field, "N/A")
+        else:
+            cost_val = ""
+        table_html += f"<td>{cost_val}</td>"
+    table_html += "</tr>"
+
+    # Row 3: Choice - (Military)
+    table_html += f"<tr><td>Choice - {m_name}</td>"
+    for _, choice_field, _ in lifestyle_columns:
+        choice_val = m_row.get(choice_field, "N/A")
+        table_html += f"<td>{choice_val}</td>"
+    table_html += "</tr>"
+
+    # Row 4: Cost - (Military)
+    table_html += f"<tr><td>Cost - {m_name}</td>"
+    for _, _, cost_field in lifestyle_columns:
+        if cost_field:
+            cost_val = m_row.get(cost_field, "N/A")
+        else:
+            cost_val = ""
+        table_html += f"<td>{cost_val}</td>"
+    table_html += "</tr>"
+
+    table_html += "</tbody></table>"
+    return table_html
 
 # --- Report Generation Functions ---
 
@@ -518,18 +573,19 @@ def generate_pair_report(c_row, m_row):
     """
     Generates an HTML report for a civilian (c_row) and military (m_row) participant pair.
     Layout:
-      - Title: "(Participant's Name)'s Financial Projection"
-      - Professional Details (labeled Profession, Annual Salary, Years of School, School Cost) in same font size.
-      - A net worth chart (static image) using values at 2024 (month 1), 2035 (month 120), and 2045 (month 240) for both.
-      - Profession description (civilian) and military equivalent from Profession_Data.
-      - A table with lifestyle decisions and costs (compiled from individual fields) at the bottom.
+      - Title: "(Participant's Name)'s Financial Projection" (centered)
+      - Professional details (left-aligned, labeled "Profession:", etc.)
+      - A net worth chart (static image) aligned to the right margin
+        for 2024 (month 1), 2035 (month 120), 2045 (month 240) for both participants.
+      - Profession description (civilian) and military equivalent
+      - A multi-column lifestyle choices table at the bottom
     """
     global profession_df  # Ensure global variable is available.
     
-    # Retrieve professional details from skill_df (for the civilian row)
+    # 1. Retrieve professional details from skill_df
     common_info = get_common_info(c_row, skill_df)
-    
-    # Retrieve job descriptions from Profession_Data (match by Profession)
+
+    # 2. Retrieve job descriptions from Profession_Data
     profession = c_row.get("Profession", "").strip()
     prof_match = profession_df[profession_df["profession"].str.strip().str.lower() == profession.lower()]
     if not prof_match.empty:
@@ -539,35 +595,12 @@ def generate_pair_report(c_row, m_row):
     else:
         civilian_desc = "Description not available."
         military_desc = "Description not available."
-    
-    # Retrieve lifestyle summaries for each participant using individual fields.
-    c_lifestyle_summary = get_lifestyle_summary(c_row)
-    m_lifestyle_summary = get_lifestyle_summary(m_row)
-    
-    # Create a table (HTML) for Lifestyle Summary.
-    lifestyle_table_html = f"""
-    <table style="width:100%; border-collapse: collapse;" border="1">
-      <tr>
-        <th>Participant</th>
-        <th>Lifestyle Summary</th>
-      </tr>
-      <tr>
-        <td>{c_row.get("Name", "")}</td>
-        <td>{c_lifestyle_summary}</td>
-      </tr>
-      <tr>
-        <td>{m_row.get("Name", "")}</td>
-        <td>{m_lifestyle_summary}</td>
-      </tr>
-    </table>
-    """
-    
-    # Build a net worth line chart using Plotly for 2024, 2035, and 2045.
-    # (Assuming month 1 corresponds to 2024, month 120 to 2035, and month 240 to 2045.)
+
+    # 3. Build the net worth line chart
     years = [2024, 2035, 2045]
     c_values = [get_networth_at(c_row, 1), get_networth_at(c_row, 120), get_networth_at(c_row, 240)]
     m_values = [get_networth_at(m_row, 1), get_networth_at(m_row, 120), get_networth_at(m_row, 240)]
-    
+
     chart_fig = px.line(
         x=years,
         y=c_values,
@@ -575,22 +608,33 @@ def generate_pair_report(c_row, m_row):
         title="Simple Net Worth Over Time",
         labels={"x": "Year", "y": "Net Worth ($)"}
     )
-    # Update the first trace (civilian) to be dotted:
+    # First trace: dotted line
     chart_fig.data[0].line.dash = 'dot'
-    chart_fig.data[0].name = c_row.get("Name", "")
-    # Add the military trace with a solid line:
-    chart_fig.add_scatter(x=years, y=m_values, mode="lines+markers", name=m_row.get("Name", ""), line=dict(dash='solid'))
+    chart_fig.data[0].name = c_row.get("Name", "Civilian")
+
+    # Second trace: solid line
+    chart_fig.add_scatter(
+        x=years,
+        y=m_values,
+        mode="lines+markers",
+        name=m_row.get("Name", "Military"),
+        line=dict(dash='solid')
+    )
     min_val = min([v for v in c_values + m_values if v is not None], default=0)
     max_val = max([v for v in c_values + m_values if v is not None], default=0)
     chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
     chart_html = get_chart_image(chart_fig)
-    
-    # Build the HTML report string.
+
+    # 4. Build the multi-column lifestyle table
+    lifestyle_table_html = build_lifestyle_table(c_row, m_row)
+
+    # 5. Construct the final HTML
+    name_str = c_row.get("Name", "Participant")
     report_html = f"""
     <html>
       <head>
         <meta charset="utf-8">
-        <title>{c_row.get("Name", "")}'s Financial Projection</title>
+        <title>{name_str}'s Financial Projection</title>
         <style>
           body {{
             font-family: Arial, sans-serif;
@@ -603,11 +647,12 @@ def generate_pair_report(c_row, m_row):
           .header h1 {{
             margin: 0;
             font-size: 24px;
+            text-align: center;
           }}
           .professional-details {{
-            text-align: center;
             margin-bottom: 20px;
-            font-size: 18px;
+            text-align: left;
+            font-size: 16px;
           }}
           .chart-section {{
             margin-bottom: 20px;
@@ -615,15 +660,23 @@ def generate_pair_report(c_row, m_row):
           }}
           .description-section {{
             margin-top: 30px;
-            font-size: 12px;
+            font-size: 14px;
             margin-bottom: 20px;
+            text-align: left;
           }}
           .description-section h3 {{
             margin-bottom: 5px;
           }}
           .lifestyle-section {{
             margin-top: 30px;
-            font-size: 12px;
+            font-size: 14px;
+            text-align: left;
+          }}
+          table {{
+            margin-top: 10px;
+          }}
+          th, td {{
+            padding: 6px 8px;
             text-align: center;
           }}
         </style>
@@ -631,27 +684,27 @@ def generate_pair_report(c_row, m_row):
       <body>
         <!-- Title -->
         <div class="header">
-          <h1>{c_row.get("Name", "")}'s Financial Projection</h1>
+          <h1>{name_str}'s Financial Projection</h1>
         </div>
-        <!-- Professional Details -->
+        <!-- Professional Details (left-aligned) -->
         <div class="professional-details">
-          <p>Profession: {common_info.get("Profession")}</p>
-          <p>Annual Salary: {common_info.get("Average Salary")}</p>
-          <p>Years of School: {common_info.get("Years of School")}</p>
-          <p>Average Cost of School: {common_info.get("School Cost")}</p>
+          <p><strong>Profession:</strong> {common_info.get("Profession")}</p>
+          <p><strong>Annual Salary:</strong> {common_info.get("Average Salary")}</p>
+          <p><strong>Years of School:</strong> {common_info.get("Years of School")}</p>
+          <p><strong>Average Cost of School:</strong> {common_info.get("School Cost")}</p>
         </div>
-        <!-- Net Worth Chart -->
+        <!-- Net Worth Chart (right-aligned) -->
         <div class="chart-section">
           {chart_html}
         </div>
-        <!-- Profession Description -->
+        <!-- Profession Description (left-aligned) -->
         <div class="description-section">
           <h3>Profession Description</h3>
           <p>{civilian_desc}</p>
           <h3>Military Equivalent</h3>
           <p>{military_desc}</p>
         </div>
-        <!-- Lifestyle Summary Table at the Bottom -->
+        <!-- Lifestyle Table at the Bottom -->
         <div class="lifestyle-section">
           <h3>Summary of Lifestyle Choices</h3>
           {lifestyle_table_html}
@@ -711,4 +764,5 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
