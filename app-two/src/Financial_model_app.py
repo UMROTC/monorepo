@@ -526,26 +526,20 @@ def build_lifestyle_table(c_row):
     Only the civilian participant's rows are shown.
     """
     c_name = c_row.get("Name", "Civilian")
-
     table_html = f"""
     <table style="width:100%; border-collapse: collapse;" border="1">
       <thead>
-        <tr style="background-color:#e1e1e1;">
+        <tr style="background-color:#e1e1e1; font-size:10px;">
           <th></th>
     """
-    # Create a header for each lifestyle category.
     for display_name, _, _ in lifestyle_columns:
         table_html += f"<th>{display_name}</th>"
-    table_html += "</tr></thead><tbody>"
-
-    # Row 1: Choice values.
+    table_html += "</tr></thead><tbody style='font-size:10px;'>"
     table_html += f"<tr><td>Choice - {c_name}</td>"
     for _, choice_field, _ in lifestyle_columns:
         choice_val = c_row.get(choice_field, "N/A")
         table_html += f"<td>{choice_val}</td>"
     table_html += "</tr>"
-
-    # Row 2: Cost values, formatted as dollars.
     table_html += f"<tr><td>Cost - {c_name}</td>"
     for _, _, cost_field in lifestyle_columns:
         if cost_field:
@@ -555,7 +549,6 @@ def build_lifestyle_table(c_row):
             cost_val = ""
         table_html += f"<td>{cost_val}</td>"
     table_html += "</tr>"
-
     table_html += "</tbody></table>"
     return table_html
 
@@ -567,17 +560,13 @@ def generate_pair_report(c_row, m_row):
     Layout:
       - Title: "(Participant's Name)'s Financial Projection" (centered)
       - Professional details (left-aligned)
-      - A net worth chart (static image) aligned to the right, moved up 1.5 inches
+      - A net worth chart (static image) aligned to the right, moved up by 1.5 inches
       - Profession descriptions for civilian and military with horizontal rules,
         moved down by 0.75 inches
       - A two-row lifestyle table for the civilian participant
     """
-    global profession_df  # Ensure global variable is available.
-    
-    # 1. Retrieve professional details from skill_df.
+    global profession_df
     common_info = get_common_info(c_row, skill_df)
-
-    # 2. Retrieve job descriptions from Profession_Data.
     profession = c_row.get("Profession", "").strip()
     prof_match = profession_df[profession_df["profession"].str.strip().str.lower() == profession.lower()]
     if not prof_match.empty:
@@ -587,12 +576,9 @@ def generate_pair_report(c_row, m_row):
     else:
         civilian_desc = "Description not available."
         military_desc = "Description not available."
-
-    # 3. Build the net worth line chart.
     years = [2024, 2035, 2045]
     c_values = [get_networth_at(c_row, 1), get_networth_at(c_row, 120), get_networth_at(c_row, 240)]
     m_values = [get_networth_at(m_row, 1), get_networth_at(m_row, 120), get_networth_at(m_row, 240)]
-
     chart_fig = px.line(
         x=years,
         y=c_values,
@@ -600,11 +586,9 @@ def generate_pair_report(c_row, m_row):
         title="Simple Net Worth Over Time",
         labels={"x": "Year", "y": "Net Worth ($)"}
     )
-    # First trace: dotted line for the civilian participant with explicit label.
     chart_fig.data[0].line.dash = 'dot'
     chart_fig.data[0].name = f"{c_row.get('Name', 'Civilian')} (Dotted)"
-    chart_fig.data[0].showlegend = True  # Force legend display for this trace.
-    # Second trace: solid line for the military participant.
+    chart_fig.data[0].showlegend = True
     chart_fig.add_scatter(
         x=years,
         y=m_values,
@@ -612,17 +596,12 @@ def generate_pair_report(c_row, m_row):
         name=f"{m_row.get('Name', 'Military')} (-mil)",
         line=dict(dash='solid')
     )
-    chart_fig.data[1].showlegend = True  # Ensure legend is shown.
-    
+    chart_fig.data[1].showlegend = True
     min_val = min([v for v in c_values + m_values if v is not None], default=0)
     max_val = max([v for v in c_values + m_values if v is not None], default=0)
     chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
     chart_html = get_chart_image(chart_fig)
-
-    # 4. Build the lifestyle table (only for civilian).
     lifestyle_table_html = build_lifestyle_table(c_row)
-
-    # 5. Construct the final HTML.
     name_str = c_row.get("Name", "Participant")
     report_html = f"""
     <html>
@@ -633,48 +612,51 @@ def generate_pair_report(c_row, m_row):
           body {{
             font-family: Arial, sans-serif;
             margin: 20px;
+            font-size: 12px;
           }}
           .header {{
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
           }}
           .header h1 {{
             margin: 0;
-            font-size: 24px;
+            font-size: 20px;
           }}
           .professional-details {{
-            margin-bottom: 20px;
-            font-size: 16px;
+            margin-bottom: 10px;
+            font-size: 11px;
           }}
-          /* Move the chart section up by 1.5 inches */
+          /* Chart section moved up by 1.5 inches */
           .chart-section {{
             margin-top: -1.5in;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
           }}
-          /* Move the description section down by 0.75 inches */
+          /* Description section moved down by 0.75 inches */
           .description-section {{
             margin-top: 0.75in;
-            font-size: 14px;
-            margin-bottom: 20px;
+            font-size: 11px;
+            margin-bottom: 10px;
           }}
           .description-section h3 {{
             margin-bottom: 5px;
+            font-size: 12px;
           }}
           .description-section hr {{
-            margin-bottom: 10px;
+            margin-bottom: 5px;
           }}
           .lifestyle-section {{
-            margin-top: 30px;
-            font-size: 14px;
+            margin-top: 10px;
+            font-size: 11px;
           }}
           table {{
             margin-top: 10px;
             border-collapse: collapse;
           }}
           th, td {{
-            padding: 6px 8px;
+            padding: 4px 6px;
             text-align: center;
             border: 1px solid #000;
+            font-size: 10px;
           }}
         </style>
       </head>
@@ -741,7 +723,6 @@ def generate_combined_pdf_report(report_html_list, pdf_output_path):
 all_reports = []
 for index, row in participant_df.iterrows():
     name = row.get("Name", "").strip()
-    # Skip if this row is already a military entry (assuming naming convention ends with "-mil")
     if name.endswith("-mil"):
         continue
     mil_name = name + "-mil"
@@ -752,17 +733,13 @@ for index, row in participant_df.iterrows():
     mil_row = mil_rows.iloc[0]
     report_html = generate_pair_report(row, mil_row)
     all_reports.append(report_html)
-    # Optionally, save individual HTML files for debugging:
-    # individual_report_path = current_dir / f"report_{name}.html"
-    # with open(individual_report_path, "w", encoding="utf-8") as f:
-    #     f.write(report_html)
-    # print(f"Generated report for {name} and {mil_name}: {individual_report_path}")
-
-# Define the PDF output path.
+    # Optionally, save individual HTML files for debugging.
+    
 pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf"
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
 
 
