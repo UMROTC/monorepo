@@ -562,7 +562,7 @@ def generate_pair_report(c_row, m_row):
       - Professional details (left-aligned)
       - A net worth chart (static image) aligned to the right, moved up by 1.5 inches
       - Profession descriptions for civilian and military with horizontal rules,
-        moved down by 0.75 inches
+        moved down by 1.75 inches
       - A two-row lifestyle table for the civilian participant
     """
     global profession_df
@@ -626,14 +626,14 @@ def generate_pair_report(c_row, m_row):
             margin-bottom: 10px;
             font-size: 11px;
           }}
-          /* Chart section moved up by 1.5 inches */
+          /* Chart section remains moved up by 1.5 inches */
           .chart-section {{
             margin-top: -1.5in;
             margin-bottom: 10px;
           }}
-          /* Description section moved down by 0.75 inches */
+          /* Description section moved down by 1.75 inches */
           .description-section {{
-            margin-top: 0.75in;
+            margin-top: 1.75in;
             font-size: 11px;
             margin-bottom: 10px;
           }}
@@ -733,12 +733,12 @@ for index, row in participant_df.iterrows():
     mil_row = mil_rows.iloc[0]
     report_html = generate_pair_report(row, mil_row)
     all_reports.append(report_html)
-    # Optionally, save individual HTML files for debugging.
     
 pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf"
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
 
 
