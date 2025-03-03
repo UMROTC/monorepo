@@ -567,7 +567,7 @@ def generate_pair_report(c_row, m_row):
     Layout:
       - Title: "(Participant's Name)'s Financial Projection" (centered)
       - Professional details (left-aligned)
-      - A net worth chart (static image) aligned to the right
+      - A net worth chart (static image) aligned to the right, moved up 1 inch
       - Profession descriptions for civilian and military with horizontal rules
       - A two-row lifestyle table for the civilian participant
     """
@@ -599,7 +599,7 @@ def generate_pair_report(c_row, m_row):
         title="Simple Net Worth Over Time",
         labels={"x": "Year", "y": "Net Worth ($)"}
     )
-    # First trace: dotted line for the civilian participant.
+    # First trace: dotted line for the civilian participant with explicit label.
     chart_fig.data[0].line.dash = 'dot'
     chart_fig.data[0].name = f"{c_row.get('Name', 'Civilian')} (Dotted)"
     # Second trace: solid line for the military participant.
@@ -642,7 +642,9 @@ def generate_pair_report(c_row, m_row):
             margin-bottom: 20px;
             font-size: 16px;
           }}
+          /* Move the chart section up by 1 inch */
           .chart-section {{
+            margin-top: -1in;
             margin-bottom: 20px;
           }}
           .description-section {{
@@ -756,6 +758,7 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
 
 
