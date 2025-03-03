@@ -567,8 +567,9 @@ def generate_pair_report(c_row, m_row):
     Layout:
       - Title: "(Participant's Name)'s Financial Projection" (centered)
       - Professional details (left-aligned)
-      - A net worth chart (static image) aligned to the right, moved up 1 inch
-      - Profession descriptions for civilian and military with horizontal rules
+      - A net worth chart (static image) aligned to the right, moved up 1.5 inches
+      - Profession descriptions for civilian and military with horizontal rules,
+        moved down by 0.75 inches
       - A two-row lifestyle table for the civilian participant
     """
     global profession_df  # Ensure global variable is available.
@@ -602,6 +603,7 @@ def generate_pair_report(c_row, m_row):
     # First trace: dotted line for the civilian participant with explicit label.
     chart_fig.data[0].line.dash = 'dot'
     chart_fig.data[0].name = f"{c_row.get('Name', 'Civilian')} (Dotted)"
+    chart_fig.data[0].showlegend = True  # Force legend display for this trace.
     # Second trace: solid line for the military participant.
     chart_fig.add_scatter(
         x=years,
@@ -610,6 +612,8 @@ def generate_pair_report(c_row, m_row):
         name=f"{m_row.get('Name', 'Military')} (-mil)",
         line=dict(dash='solid')
     )
+    chart_fig.data[1].showlegend = True  # Ensure legend is shown.
+    
     min_val = min([v for v in c_values + m_values if v is not None], default=0)
     max_val = max([v for v in c_values + m_values if v is not None], default=0)
     chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
@@ -642,13 +646,14 @@ def generate_pair_report(c_row, m_row):
             margin-bottom: 20px;
             font-size: 16px;
           }}
-          /* Move the chart section up by 1 inch */
+          /* Move the chart section up by 1.5 inches */
           .chart-section {{
-            margin-top: -1in;
+            margin-top: -1.5in;
             margin-bottom: 20px;
           }}
+          /* Move the description section down by 0.75 inches */
           .description-section {{
-            margin-top: 30px;
+            margin-top: 0.75in;
             font-size: 14px;
             margin-bottom: 20px;
           }}
@@ -758,6 +763,7 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
 
 
