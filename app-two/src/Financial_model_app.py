@@ -443,7 +443,7 @@ lifestyle_columns = [
     ("Leisure", "Leisure Choice", "Leisure Cost"),
     ("Common Interests", "Common Interest Choice", "Common Interest Cost"),
     ("Children", "Number of Children", "Children Cost"),
-    ("Who Pays for College", "Who pays for College", ""),  # If no cost column, leave blank
+    ("Who Pays for College", "Who pays for College", ""),
     ("Health Insurance", "Health Insurance Level", "Health Insurance Cost"),
     ("Monthly Savings", "Savings Choice", "Monthly Savings"),
 ]
@@ -491,33 +491,29 @@ def get_networth_at(row, month):
 def get_chart_image(chart_fig):
     """
     Renders the Plotly figure to a PNG image using kaleido,
-    encodes it in base64, and returns an HTML <img> tag with reduced size
+    encodes it in base64, and returns an HTML <img> tag with increased size
     aligned to the right margin.
     """
     try:
         img_bytes = chart_fig.to_image(format="png")
         encoded = base64.b64encode(img_bytes).decode("utf-8")
-        # Set max-width to 42% and float right to align at the right margin.
+        # Set max-width to 60% to enlarge the chart by ~40% from 42%.
         return (
             f'<img src="data:image/png;base64,{encoded}" '
             f'alt="Net Worth Chart" '
-            f'style="max-width:42%; float:right; margin-left:auto; margin-right:0;" />'
+            f'style="max-width:60%; float:right; margin-left:auto; margin-right:0;" />'
         )
     except Exception as e:
         st.error(f"Error generating chart image: {e}")
         return "<p>Error generating chart image.</p>"
 
-def build_lifestyle_table(c_row, m_row):
+def build_lifestyle_table(c_row):
     """
     Builds an HTML table with columns for each lifestyle category,
-    and four rows total:
-      1) Choice - (Civilian participant)
-      2) Cost - (Civilian participant)
-      3) Choice - (Military participant)
-      4) Cost - (Military participant)
+    but only for the civilian participant (choice and cost).
+    The military participant's rows are omitted.
     """
     c_name = c_row.get("Name", "Civilian")
-    m_name = m_row.get("Name", "Military")
 
     table_html = f"""
     <table style="width:100%; border-collapse: collapse;" border="1">
@@ -547,23 +543,6 @@ def build_lifestyle_table(c_row, m_row):
         table_html += f"<td>{cost_val}</td>"
     table_html += "</tr>"
 
-    # Row 3: Choice - (Military)
-    table_html += f"<tr><td>Choice - {m_name}</td>"
-    for _, choice_field, _ in lifestyle_columns:
-        choice_val = m_row.get(choice_field, "N/A")
-        table_html += f"<td>{choice_val}</td>"
-    table_html += "</tr>"
-
-    # Row 4: Cost - (Military)
-    table_html += f"<tr><td>Cost - {m_name}</td>"
-    for _, _, cost_field in lifestyle_columns:
-        if cost_field:
-            cost_val = m_row.get(cost_field, "N/A")
-        else:
-            cost_val = ""
-        table_html += f"<td>{cost_val}</td>"
-    table_html += "</tr>"
-
     table_html += "</tbody></table>"
     return table_html
 
@@ -576,9 +555,8 @@ def generate_pair_report(c_row, m_row):
       - Title: "(Participant's Name)'s Financial Projection" (centered)
       - Professional details (left-aligned, labeled "Profession:", etc.)
       - A net worth chart (static image) aligned to the right margin
-        for 2024 (month 1), 2035 (month 120), 2045 (month 240) for both participants.
-      - Profession description (civilian) and military equivalent
-      - A multi-column lifestyle choices table at the bottom
+      - Profession description (civilian) and military equivalent (with horizontal lines below each title)
+      - A two-row lifestyle table for only the civilian participant
     """
     global profession_df  # Ensure global variable is available.
     
@@ -625,8 +603,8 @@ def generate_pair_report(c_row, m_row):
     chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
     chart_html = get_chart_image(chart_fig)
 
-    # 4. Build the multi-column lifestyle table
-    lifestyle_table_html = build_lifestyle_table(c_row, m_row)
+    # 4. Build the two-row lifestyle table (only for civilian)
+    lifestyle_table_html = build_lifestyle_table(c_row)
 
     # 5. Construct the final HTML
     name_str = c_row.get("Name", "Participant")
@@ -667,6 +645,9 @@ def generate_pair_report(c_row, m_row):
           .description-section h3 {{
             margin-bottom: 5px;
           }}
+          .description-section hr {{
+            margin-bottom: 10px;
+          }}
           .lifestyle-section {{
             margin-top: 30px;
             font-size: 14px;
@@ -674,6 +655,7 @@ def generate_pair_report(c_row, m_row):
           }}
           table {{
             margin-top: 10px;
+            border-collapse: collapse;
           }}
           th, td {{
             padding: 6px 8px;
@@ -700,11 +682,13 @@ def generate_pair_report(c_row, m_row):
         <!-- Profession Description (left-aligned) -->
         <div class="description-section">
           <h3>Profession Description</h3>
+          <hr />
           <p>{civilian_desc}</p>
           <h3>Military Equivalent</h3>
+          <hr />
           <p>{military_desc}</p>
         </div>
-        <!-- Lifestyle Table at the Bottom -->
+        <!-- Lifestyle Table (only civilian participant) -->
         <div class="lifestyle-section">
           <h3>Summary of Lifestyle Choices</h3>
           {lifestyle_table_html}
@@ -764,5 +748,6 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
 
