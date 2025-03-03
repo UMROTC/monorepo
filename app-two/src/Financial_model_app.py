@@ -422,6 +422,46 @@ import io
 from weasyprint import HTML  # for PDF conversion
 import plotly.express as px
 
+# --- Helper Functions ---
+
+def get_common_info(row, skill_df):
+    """Extract professional details from skill_df for a given participant row."""
+    profession = row.get("Profession", "").strip()
+    skill_subset = skill_df[skill_df["Profession"].str.strip() == profession]
+    if skill_subset.empty:
+        return {"Profession": "N/A", "Average Salary": "N/A", "Years of School": "N/A", "School Cost": "N/A"}
+    fin_row = skill_subset.iloc[0]
+    try:
+        months_school_val = int(fin_row.get("Months School", 0))
+    except Exception:
+        months_school_val = 0
+    # Retrieve School Cost and format as dollars if possible.
+    school_cost = fin_row.get("School Cost", "N/A")
+    try:
+        school_cost_val = float(school_cost)
+        school_cost = f"${school_cost_val:,.0f}"
+    except Exception:
+        pass
+    avg_salary = fin_row.get("Average Salary", "N/A")
+    try:
+        avg_salary = float(avg_salary)
+        avg_salary = f"${avg_salary:,.0f}"
+    except Exception:
+        pass
+    return {
+        "Profession": fin_row.get("Profession", "N/A"),
+        "Average Salary": avg_salary,
+        "Years of School": f"{float(months_school_val)/12:.1f}" if months_school_val else "N/A",
+        "School Cost": school_cost
+    }
+
+def get_networth_at(row, month):
+    """Helper: Return the net worth for a participant at the specified month (1-indexed)."""
+    nw_list = row.get("Net Worth Over Time", [])
+    if len(nw_list) >= month:
+        return nw_list[month - 1]["Net Worth"]
+    return None
+
 def get_chart_image(chart_fig):
     """
     Renders the Plotly figure to a PNG image using kaleido,
@@ -436,13 +476,16 @@ def get_chart_image(chart_fig):
         st.error(f"Error generating chart image: {e}")
         return "<p>Error generating chart image.</p>"
 
+# --- Report Generation Functions ---
+
 def generate_pair_report(c_row, m_row):
     """
     Generates an HTML report for a civilian (c_row) and military (m_row) participant pair.
     Layout based on the provided PDF:
-      - Title: "(Participant's Name) Financial Projection"
-      - Below that, professional details (profession, annual salary, years of school, school cost) in the same font size.
-      - A net worth chart using values at 2024 (month 1), 2035 (month 120), and 2045 (month 240) for both participants.
+      - Title with participant's name and "Financial Projection".
+      - Professional details (profession, annual salary, years of school, school cost)
+        in the same font size.
+      - A net worth chart using values at 2024 (month 1), 2035 (month 120), and 2045 (month 240) for both.
       - Profession description (civilian) and military counterpart roles from Profession_Data.
       - A table with lifestyle decisions and costs displayed along the bottom.
     """
@@ -470,7 +513,7 @@ def generate_pair_report(c_row, m_row):
         "Lifestyle Cost": m_row.get("Lifestyle Cost", "N/A")
     }
     
-    # Create a table (HTML) for Lifestyle Summary displayed at the bottom.
+    # Create a table (HTML) for Lifestyle Summary (displayed at the bottom)
     lifestyle_table_html = f"""
     <table style="width:100%; border-collapse: collapse;" border="1">
       <tr>
@@ -492,7 +535,6 @@ def generate_pair_report(c_row, m_row):
     """
     
     # Build a net worth line chart using Plotly for 2024, 2035, and 2045.
-    # (Assuming month 1 corresponds to 2024, month 120 to 2035, and month 240 to 2045.)
     years = [2024, 2035, 2045]
     c_values = [get_networth_at(c_row, 1), get_networth_at(c_row, 120), get_networth_at(c_row, 240)]
     m_values = [get_networth_at(m_row, 1), get_networth_at(m_row, 120), get_networth_at(m_row, 240)]
@@ -508,7 +550,6 @@ def generate_pair_report(c_row, m_row):
     min_val = min([v for v in c_values + m_values if v is not None], default=0)
     max_val = max([v for v in c_values + m_values if v is not None], default=0)
     chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
-    # Render chart as a static image.
     chart_html = get_chart_image(chart_fig)
     
     # Build the HTML report string.
@@ -610,7 +651,8 @@ def generate_combined_pdf_report(report_html_list, pdf_output_path):
     HTML(string=combined_html).write_pdf(str(pdf_output_path))
     print(f"Combined PDF report saved to: {pdf_output_path}")
 
-# Loop through participant_df to generate reports for each valid participant pair.
+# --- Main Loop: Generate Reports ---
+
 all_reports = []
 for index, row in participant_df.iterrows():
     name = row.get("Name", "").strip()
@@ -636,6 +678,7 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
 
 
