@@ -417,6 +417,8 @@ print("Script complete.")
 # -------------------------------------------------------------------------
 # PDF Report Generation Section (Appended)
 # -------------------------------------------------------------------------
+import base64
+import io
 from weasyprint import HTML  # for PDF conversion
 
 # Load Profession Data (for job descriptions)
@@ -430,6 +432,9 @@ try:
 except Exception as e:
     st.error(f"Error loading Profession Data file: {e}")
     st.stop()
+
+# Debug: Print participant data columns to verify field names.
+st.write("Participant Data columns:", participant_df.columns.tolist())
 
 def get_common_info(row, skill_df):
     """Extract professional details from skill_df for a given participant row."""
@@ -455,7 +460,6 @@ def get_common_info(row, skill_df):
         avg_salary = f"${avg_salary:,.0f}"
     except Exception:
         pass
-
     return {
         "Profession": fin_row.get("Profession", "N/A"),
         "Average Salary": avg_salary,
@@ -470,12 +474,26 @@ def get_networth_at(row, month):
         return nw_list[month - 1]["Net Worth"]
     return None
 
+def get_chart_image(chart_fig):
+    """
+    Renders the Plotly figure to a PNG image using kaleido,
+    encodes it in base64, and returns an HTML <img> tag.
+    """
+    try:
+        # Export the figure to PNG bytes.
+        img_bytes = chart_fig.to_image(format="png")
+        encoded = base64.b64encode(img_bytes).decode("utf-8")
+        return f'<img src="data:image/png;base64,{encoded}" alt="Net Worth Chart" style="max-width:100%;" />'
+    except Exception as e:
+        st.error(f"Error generating chart image: {e}")
+        return "<p>Error generating chart image.</p>"
+
 def generate_pair_report(c_row, m_row):
     """
     Generates an HTML report for a civilian (c_row) and military (m_row) participant pair.
     Layout based on the provided PDF:
       - Header with professional details from Skillset_cost_worksheet_csv.
-      - A net worth chart using values at 2024 (month 1), 2035 (month 120) and 2045 (month 240) for both participants.
+      - A net worth chart using values at 2025 (month 1), 2035 (month 120), and 2045 (month 240) for both participants.
       - Profession description (civilian) and military counterpart roles from Profession_Data.
       - A table with lifestyle decisions and costs displayed along the bottom of the page.
     """
@@ -485,7 +503,6 @@ def generate_pair_report(c_row, m_row):
     # Retrieve job descriptions from Profession_Data (match by Profession)
     profession = c_row.get("Profession", "").strip()
     prof_match = profession_df[profession_df["profession"].str.strip().str.lower() == profession.lower()]
-
     if not prof_match.empty:
         prof_row = prof_match.iloc[0]
         civilian_desc = prof_row.get("description", "Description not available.")
@@ -542,7 +559,8 @@ def generate_pair_report(c_row, m_row):
     min_val = min([v for v in c_values + m_values if v is not None], default=0)
     max_val = max([v for v in c_values + m_values if v is not None], default=0)
     chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
-    chart_html = chart_fig.to_html(full_html=False, include_plotlyjs='cdn')
+    # Instead of to_html (which requires JS), generate a static image.
+    chart_html = get_chart_image(chart_fig)
     
     # Build the HTML report string with the lifestyle table at the bottom.
     report_html = f"""
