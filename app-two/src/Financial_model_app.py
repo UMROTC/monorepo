@@ -607,9 +607,10 @@ def generate_pair_report(c_row, m_row):
     # Note text added at bottom of page
     note_text = (
         "This sheet depicts a simple net worth calculation that considers only two values - your monthly savings "
-        "compounding at 5% Annually, and your student debt, compounding at 6% Annually. The intent of this sheet is to give you the ability to project how student debt will affect your purchase power in the future. "
-        "Scholarships and grants are great ways to pay for training you will need in your future profession. The Military is one of many employers who will help pay for your training and education for your job. "
-        "If you go straight to work after graduation, the cost associated with that profession represents licensing, tools, and apprenticeships (if any)."
+        "compounding at 5% Annually, and your student debt, compounding at 6% Annually. The decisions that you made in the Budget Simulator program are displayed at the bottom, along with their associated costs. "
+        "The intent of this sheet is to give you the ability to project how student debt will affect your purchase power in the future. Scholarships and grants are great ways to payfor training you will need "
+        "in your future profession. The Military is one of many employers who will help pay for your training and education for your job. If you go straight to work after graduation, the cost associated with"
+        "that profession represents licensing, tools, and apprenticeships (if any)."
     )
     report_html = f"""
     <html>
