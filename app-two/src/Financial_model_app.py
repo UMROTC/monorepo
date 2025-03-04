@@ -534,12 +534,12 @@ def build_lifestyle_table(c_row):
     for display_name, _, _ in lifestyle_columns:
         table_html += f"<th>{display_name}</th>"
     table_html += "</tr></thead><tbody style='font-size:10px;'>"
-    table_html += f"<tr><td>Choice - {c_name}</td>"
+    table_html += f"<tr><td>Choice</td>"
     for _, choice_field, _ in lifestyle_columns:
         choice_val = c_row.get(choice_field, "N/A")
         table_html += f"<td>{choice_val}</td>"
     table_html += "</tr>"
-    table_html += f"<tr><td>Cost - {c_name}</td>"
+    table_html += f"<tr><td>Cost</td>"
     for _, _, cost_field in lifestyle_columns:
         if cost_field:
             cost_val = c_row.get(cost_field, "N/A")
@@ -587,13 +587,13 @@ def generate_pair_report(c_row, m_row):
         labels={"x": "Year", "y": "Net Worth ($)"}
     )
     chart_fig.data[0].line.dash = 'dot'
-    chart_fig.data[0].name = f"{c_row.get('Name', 'Civilian')} (Dotted)"
+    chart_fig.data[0].name = f"{c_row.get('Name', 'Civilian')}"
     chart_fig.data[0].showlegend = True
     chart_fig.add_scatter(
         x=years,
         y=m_values,
         mode="lines+markers",
-        name=f"{m_row.get('Name', 'Military')} (-mil)",
+        name=f"{m_row.get('Name', 'Military')}",
         line=dict(dash='solid')
     )
     chart_fig.data[1].showlegend = True
