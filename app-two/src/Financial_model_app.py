@@ -492,12 +492,12 @@ def build_lifestyle_table(c_row):
 def generate_pair_report(c_row, m_row):
     """
     Generates an HTML report for a civilian (c_row) and military (m_row) participant pair.
-    The layout uses a flex container to anchor the bottom block (lifestyle table and note)
-    to the bottom of the page, while the top block (header, career data, chart, and description)
-    occupies the remaining space.
     
-    - The Profession Description is anchored to start ~20px below the "Average Cost of School" line.
-    - The chart's height is reduced by 15% dynamically.
+    The layout is divided into two blocks:
+      - The TOP BLOCK contains: Header, Professional details, fixed-size chart, and Profession Description.
+        * The Profession Description is anchored approximately 20 pixels (0.25in) below the career data.
+      - The BOTTOM BLOCK is anchored to the bottom of the page and contains:
+        * The "Summary of Lifestyle Choices" table (with its title) and the Note text.
     """
     global profession_df
     common_info = get_common_info(c_row, skill_df)
@@ -510,12 +510,13 @@ def generate_pair_report(c_row, m_row):
     else:
         civilian_desc = "Description not available."
         military_desc = "Description not available."
-        
+    
     years = [2024, 2035, 2045]
     c_values = [get_networth_at(c_row, 1), get_networth_at(c_row, 120), get_networth_at(c_row, 240)]
     m_values = [get_networth_at(m_row, 1), get_networth_at(m_row, 120), get_networth_at(m_row, 240)]
     
-    # Create the line chart and reduce its height by 15%
+    # Create a fixed-size chart with height reduced by 15%
+    import plotly.express as px
     chart_fig = px.line(
         x=years,
         y=c_values,
@@ -537,8 +538,8 @@ def generate_pair_report(c_row, m_row):
     min_val = min([v for v in c_values + m_values if v is not None], default=0)
     max_val = max([v for v in c_values + m_values if v is not None], default=0)
     chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
-    default_height = chart_fig.layout.height or 400
-    chart_fig.update_layout(height=int(default_height * 0.85))
+    fixed_chart_height = 300  # Set a fixed chart height (adjust as needed)
+    chart_fig.update_layout(height=fixed_chart_height)
     chart_html = get_chart_image(chart_fig)
     
     lifestyle_table_html = build_lifestyle_table(c_row)
@@ -551,7 +552,6 @@ def generate_pair_report(c_row, m_row):
         "that profession represents licensing, tools, and apprenticeships (if any)."
     )
     
-    # Build the HTML using a flex container to anchor the bottom block.
     report_html = f"""
     <html>
       <head>
@@ -568,6 +568,7 @@ def generate_pair_report(c_row, m_row):
             font-family: Arial, sans-serif;
             font-size: 12px;
           }}
+          /* Use a flex container to separate top and bottom blocks */
           .page-container {{
             display: flex;
             flex-direction: column;
@@ -575,11 +576,13 @@ def generate_pair_report(c_row, m_row):
             justify-content: space-between;
           }}
           .top-block {{
-            /* Contains header, career data, chart, and description */
+            /* Header, Professional Details, Chart, and Description */
+            padding: 20px;
             page-break-inside: avoid;
           }}
           .bottom-block {{
-            /* Anchored to the bottom */
+            /* Lifestyle Table and Note, anchored at the bottom */
+            padding: 20px;
             page-break-inside: avoid;
           }}
           .header {{
@@ -595,11 +598,10 @@ def generate_pair_report(c_row, m_row):
             font-size: 11px;
           }}
           .chart-section {{
-            /* Chart appears below career data; adjust margin as needed */
             margin-top: 0.25in;
           }}
+          /* Description section: anchored 20px (0.25in) below professional details */
           .description-section {{
-            /* Anchor the description about 20px (0.25in) below career data */
             margin-top: 0.25in;
             font-size: 11px;
             margin-bottom: 0.5in;
@@ -611,6 +613,7 @@ def generate_pair_report(c_row, m_row):
           .description-section hr {{
             margin-bottom: 5px;
           }}
+          /* Lifestyle section: title anchored directly above the table */
           .lifestyle-title {{
             text-align: center;
             font-size: 12px;
@@ -718,6 +721,7 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
 
 
