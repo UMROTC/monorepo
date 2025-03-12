@@ -380,7 +380,6 @@ profession_data_path = repo_root / 'app-two' / 'data' / 'input' / 'Profession_Da
 try:
     profession_df = pd.read_csv(profession_data_path, encoding='utf-8-sig')
     profession_df.columns = [col.strip().lower() for col in profession_df.columns]
-    # Debug output removed.
 except Exception as e:
     st.error(f"Error loading Profession Data file: {e}")
     st.stop()
@@ -540,16 +539,16 @@ def generate_pair_report(c_row, m_row):
     min_val = min([v for v in c_values + m_values if v is not None], default=0)
     max_val = max([v for v in c_values + m_values if v is not None], default=0)
     chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
-    # Reduce chart height by 15% (set a fixed height; adjust as needed)
-    chart_fig.update_layout(height=chart_fig.layout.height or 400)
-    chart_fig.update_layout(height=int((chart_fig.layout.height or 400) * 0.85))
+    # Dynamically reduce chart height by 15%
+    default_height = chart_fig.layout.height or 400
+    chart_fig.update_layout(height=int(default_height * 0.85))
     chart_html = get_chart_image(chart_fig)
     lifestyle_table_html = build_lifestyle_table(c_row)
     name_str = c_row.get("Name", "Participant")
     note_text = (
         "This sheet depicts a simple net worth calculation that considers only two values - your monthly savings "
         "compounding at 5% Annually, and your student debt, compounding at 6% Annually. The decisions that you made in the Budget Simulator program are displayed at the bottom, along with their associated costs. "
-        "The intent of this sheet is to give you the ability to project how student debt will affect your purchase power in the future. Scholarships and grants are great ways to payfor training you will need "
+        "The intent of this sheet is to give you the ability to project how student debt will affect your purchase power in the future. Scholarships and grants are great ways to pay for training you will need "
         "in your future profession. The Military is one of many employers who will help pay for your training and education for your job. If you go straight to work after graduation, the cost associated with "
         "that profession represents licensing, tools, and apprenticeships (if any)."
     )
@@ -559,6 +558,10 @@ def generate_pair_report(c_row, m_row):
         <meta charset="utf-8">
         <title>{name_str}'s Financial Projection</title>
         <style>
+          /* Prevent page breaks inside key sections */
+          .header, .professional-details, .chart-section, .description-section, .lifestyle-section, .note-section {{
+            page-break-inside: avoid;
+          }}
           body {{
             font-family: Arial, sans-serif;
             margin: 20px;
@@ -576,11 +579,11 @@ def generate_pair_report(c_row, m_row):
             margin-bottom: 10px;
             font-size: 11px;
           }}
-          /* Chart section remains with same negative top margin */
+          /* Chart section: adjust size and prevent splitting */
           .chart-section {{
             margin-top: -1.0in;
           }}
-          /* Description section: set top margin to 0.5in (48px) below professional details */
+          /* Description section: anchored 48px (0.5in) below professional details */
           .description-section {{
             margin-top: 0.5in;
             font-size: 11px;
@@ -593,7 +596,7 @@ def generate_pair_report(c_row, m_row):
           .description-section hr {{
             margin-bottom: 5px;
           }}
-          /* Lifestyle section: move table up with a -0.75in top margin */
+          /* Lifestyle section: title anchored directly above table */
           .lifestyle-section {{
             margin-top: -0.75in;
             font-size: 11px;
@@ -699,6 +702,7 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
    
 
