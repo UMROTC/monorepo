@@ -451,7 +451,7 @@ def get_chart_image(chart_fig):
         return (
             f'<img src="data:image/png;base64,{encoded}" '
             f'alt="Net Worth Chart" '
-            f'style="max-width:78%; float:right; margin-left:auto; margin-right:0;" />'
+            f'style="max-width:100%; height:100%; display:block; margin:0 auto;" />'
         )
     except Exception as e:
         st.error(f"Error generating chart image: {e}")
@@ -459,12 +459,16 @@ def get_chart_image(chart_fig):
 
 def build_lifestyle_table(c_row):
     """
-    Builds an HTML table with columns for each lifestyle category,
-    including cell borders and cost values formatted as dollars.
+    Builds an HTML table for lifestyle choices with a title bar.
+    The header row serves as the title "Summary of Lifestyle Choices".
     """
+    # Create header row as title bar spanning all columns.
+    header_row = "<tr style='background-color:#ccc; font-size:12px;'><th colspan='{}'>Summary of Lifestyle Choices</th></tr>".format(len(lifestyle_columns)+1)
+    
     table_html = f"""
     <table style="width:100%; border-collapse: collapse;" border="1">
       <thead>
+        {header_row}
         <tr style="background-color:#e1e1e1; font-size:10px;">
           <th></th>
     """
@@ -493,11 +497,14 @@ def generate_pair_report(c_row, m_row):
     """
     Generates an HTML report for a civilian (c_row) and military (m_row) participant pair.
     
-    The layout is divided into two blocks:
-      - The TOP BLOCK contains: Header, Professional details, fixed-size chart, and Profession Description.
-        * The Profession Description is anchored approximately 20 pixels (0.25in) below the career data.
-      - The BOTTOM BLOCK is anchored to the bottom of the page and contains:
-        * The "Summary of Lifestyle Choices" table (with its title) and the Note text.
+    Layout:
+      TOP BLOCK:
+        - Header (Title) and Professional Details (Career Data)
+        - A middle two-column container:
+            Left column: Profession Description and Military Equivalent (anchored 20px below career data)
+            Right column: Fixed-size chart
+      BOTTOM BLOCK (anchored to bottom of page):
+        - Lifestyle Table (with built-in title bar)
     """
     global profession_df
     common_info = get_common_info(c_row, skill_df)
@@ -515,8 +522,9 @@ def generate_pair_report(c_row, m_row):
     c_values = [get_networth_at(c_row, 1), get_networth_at(c_row, 120), get_networth_at(c_row, 240)]
     m_values = [get_networth_at(m_row, 1), get_networth_at(m_row, 120), get_networth_at(m_row, 240)]
     
-    # Create a fixed-size chart with height reduced by 15%
+    # Create a fixed-size chart
     import plotly.express as px
+    fixed_chart_height = 300  # Fixed chart height in pixels (adjust as needed)
     chart_fig = px.line(
         x=years,
         y=c_values,
@@ -538,20 +546,13 @@ def generate_pair_report(c_row, m_row):
     min_val = min([v for v in c_values + m_values if v is not None], default=0)
     max_val = max([v for v in c_values + m_values if v is not None], default=0)
     chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
-    fixed_chart_height = 300  # Set a fixed chart height (adjust as needed)
     chart_fig.update_layout(height=fixed_chart_height)
     chart_html = get_chart_image(chart_fig)
     
     lifestyle_table_html = build_lifestyle_table(c_row)
     name_str = c_row.get("Name", "Participant")
-    note_text = (
-        "This sheet depicts a simple net worth calculation that considers only two values - your monthly savings "
-        "compounding at 5% Annually, and your student debt, compounding at 6% Annually. The decisions that you made in the Budget Simulator program are displayed at the bottom, along with their associated costs. "
-        "The intent of this sheet is to give you the ability to project how student debt will affect your purchase power in the future. Scholarships and grants are great ways to pay for training you will need "
-        "in your future profession. The Military is one of many employers who will help pay for your training and education for your job. If you go straight to work after graduation, the cost associated with "
-        "that profession represents licensing, tools, and apprenticeships (if any)."
-    )
     
+    # Build HTML using a flex layout:
     report_html = f"""
     <html>
       <head>
@@ -567,22 +568,22 @@ def generate_pair_report(c_row, m_row):
             padding: 0;
             font-family: Arial, sans-serif;
             font-size: 12px;
+            height: 100vh;
           }}
-          /* Use a flex container to separate top and bottom blocks */
           .page-container {{
             display: flex;
             flex-direction: column;
             height: 100vh;
-            justify-content: space-between;
           }}
           .top-block {{
-            /* Header, Professional Details, Chart, and Description */
+            /* Top block will take the remaining space above the bottom block */
+            flex: 1;
             padding: 20px;
-            page-break-inside: avoid;
           }}
           .bottom-block {{
-            /* Lifestyle Table and Note, anchored at the bottom */
+            /* Bottom block anchored to the bottom */
             padding: 20px;
+            /* Ensure it does not break across pages */
             page-break-inside: avoid;
           }}
           .header {{
@@ -597,14 +598,24 @@ def generate_pair_report(c_row, m_row):
             margin-bottom: 10px;
             font-size: 11px;
           }}
-          .chart-section {{
-            margin-top: 0.25in;
+          /* Middle container with two columns */
+          .middle-container {{
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
           }}
-          /* Description section: anchored 20px (0.25in) below professional details */
+          .left-column {{
+            flex: 1;
+            /* Anchor the description block 20px below professional details */
+            margin-top: 20px;
+          }}
+          .right-column {{
+            flex: 1;
+            /* Fixed chart container */
+            height: {fixed_chart_height}px;
+          }}
           .description-section {{
-            margin-top: 0.25in;
             font-size: 11px;
-            margin-bottom: 0.5in;
           }}
           .description-section h3 {{
             margin-bottom: 5px;
@@ -613,15 +624,9 @@ def generate_pair_report(c_row, m_row):
           .description-section hr {{
             margin-bottom: 5px;
           }}
-          /* Lifestyle section: title anchored directly above the table */
-          .lifestyle-title {{
-            text-align: center;
-            font-size: 12px;
-            margin: 0;
-            padding-bottom: 5px;
-          }}
+          /* Lifestyle table will have its own header row */
           table {{
-            margin-top: 0;
+            width: 100%;
             border-collapse: collapse;
           }}
           th, td {{
@@ -629,13 +634,6 @@ def generate_pair_report(c_row, m_row):
             text-align: center;
             border: 1px solid #000;
             font-size: 10px;
-          }}
-          .note-section {{
-            margin-top: 10px;
-            font-size: 10px;
-            text-align: left;
-            border-top: 1px solid #000;
-            padding-top: 5px;
           }}
         </style>
       </head>
@@ -651,28 +649,24 @@ def generate_pair_report(c_row, m_row):
               <p><strong>Years of School:</strong> {common_info.get("Years of School")}</p>
               <p><strong>Average Cost of School:</strong> {common_info.get("School Cost")}</p>
             </div>
-            <div class="chart-section">
-              {chart_html}
-            </div>
-            <div class="description-section">
-              <h3>Profession Description</h3>
-              <hr />
-              <p>{civilian_desc}</p>
-              <h3>Military Equivalent</h3>
-              <hr />
-              <p>{military_desc}</p>
+            <div class="middle-container">
+              <div class="left-column">
+                <div class="description-section">
+                  <h3>Profession Description</h3>
+                  <hr />
+                  <p>{civilian_desc}</p>
+                  <h3>Military Equivalent</h3>
+                  <hr />
+                  <p>{military_desc}</p>
+                </div>
+              </div>
+              <div class="right-column">
+                {chart_html}
+              </div>
             </div>
           </div>
           <div class="bottom-block">
-            <div class="lifestyle-section">
-              <div class="lifestyle-title">
-                <h3>Summary of Lifestyle Choices</h3>
-              </div>
-              {lifestyle_table_html}
-            </div>
-            <div class="note-section">
-              <p>{note_text}</p>
-            </div>
+            {lifestyle_table_html}
           </div>
         </div>
       </body>
@@ -721,6 +715,7 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
 
 
