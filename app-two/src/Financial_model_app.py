@@ -497,12 +497,10 @@ def generate_pair_report(c_row, m_row):
     """
     Generates an HTML report for a civilian (c_row) and military (m_row) participant pair.
     Layout:
-      - Title: "(Participant's Name)'s Financial Projection" (centered)
-      - Professional details (left-aligned)
-      - A net worth chart (static image) aligned to the right (with reduced size)
-      - Profession descriptions for civilian and military with horizontal rules,
-      - A two-row lifestyle table for the civilian participant with a title immediately above it for "Summary of Lifestyle Choices"
-      - A note at the bottom of the page
+      - Top block: Header and Professional details (Career Data)
+      - Middle block: Chart (dynamically reduced in height)
+      - Below Career Data: Profession Description (anchored ~20px below "Average Cost of School")
+      - Bottom block (anchored to the bottom of the page): Lifestyle table with title and Note text
     """
     global profession_df
     common_info = get_common_info(c_row, skill_df)
@@ -518,6 +516,8 @@ def generate_pair_report(c_row, m_row):
     years = [2024, 2035, 2045]
     c_values = [get_networth_at(c_row, 1), get_networth_at(c_row, 120), get_networth_at(c_row, 240)]
     m_values = [get_networth_at(m_row, 1), get_networth_at(m_row, 120), get_networth_at(m_row, 240)]
+    
+    # Create chart and reduce its height by 15%
     chart_fig = px.line(
         x=years,
         y=c_values,
@@ -539,10 +539,10 @@ def generate_pair_report(c_row, m_row):
     min_val = min([v for v in c_values + m_values if v is not None], default=0)
     max_val = max([v for v in c_values + m_values if v is not None], default=0)
     chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
-    # Dynamically reduce chart height by 15%
     default_height = chart_fig.layout.height or 400
     chart_fig.update_layout(height=int(default_height * 0.85))
     chart_html = get_chart_image(chart_fig)
+    
     lifestyle_table_html = build_lifestyle_table(c_row)
     name_str = c_row.get("Name", "Participant")
     note_text = (
@@ -552,20 +552,26 @@ def generate_pair_report(c_row, m_row):
         "in your future profession. The Military is one of many employers who will help pay for your training and education for your job. If you go straight to work after graduation, the cost associated with "
         "that profession represents licensing, tools, and apprenticeships (if any)."
     )
+    
+    # Build the report using a page container.
     report_html = f"""
     <html>
       <head>
         <meta charset="utf-8">
         <title>{name_str}'s Financial Projection</title>
         <style>
-          /* Prevent page breaks inside key sections */
-          .header, .professional-details, .chart-section, .description-section, .lifestyle-section, .note-section {{
+          @page {{
+            size: A4 landscape;
+            margin: 1cm;
+          }}
+          .page-container {{
+            position: relative;
+            min-height: 100%;
+            /* Avoid breaking inside key sections */
             page-break-inside: avoid;
           }}
-          body {{
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            font-size: 12px;
+          .header, .professional-details, .chart-section, .description-section, .bottom-section {{
+            page-break-inside: avoid;
           }}
           .header {{
             text-align: center;
@@ -579,15 +585,15 @@ def generate_pair_report(c_row, m_row):
             margin-bottom: 10px;
             font-size: 11px;
           }}
-          /* Chart section: adjust size and prevent splitting */
+          /* Chart section: no negative margin; let it flow normally */
           .chart-section {{
-            margin-top: -1.0in;
+            margin-top: 0.25in;
           }}
-          /* Description section: anchored 48px (0.5in) below professional details */
+          /* Description section: anchored 20px (approx. 0.25in) below career data */
           .description-section {{
-            margin-top: 0.5in;
+            margin-top: 0.25in;
             font-size: 11px;
-            margin-bottom: 0.85in;
+            margin-bottom: 0.5in;
           }}
           .description-section h3 {{
             margin-bottom: 5px;
@@ -596,10 +602,12 @@ def generate_pair_report(c_row, m_row):
           .description-section hr {{
             margin-bottom: 5px;
           }}
-          /* Lifestyle section: title anchored directly above table */
-          .lifestyle-section {{
-            margin-top: -0.75in;
-            font-size: 11px;
+          /* Bottom section: anchored to the bottom of the page */
+          .bottom-section {{
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
           }}
           .lifestyle-title {{
             text-align: center;
@@ -627,34 +635,38 @@ def generate_pair_report(c_row, m_row):
         </style>
       </head>
       <body>
-        <div class="header">
-          <h1>{name_str}'s Financial Projection</h1>
-        </div>
-        <div class="professional-details">
-          <p><strong>Profession:</strong> {common_info.get("Profession")}</p>
-          <p><strong>Annual Salary:</strong> {common_info.get("Average Salary")}</p>
-          <p><strong>Years of School:</strong> {common_info.get("Years of School")}</p>
-          <p><strong>Average Cost of School:</strong> {common_info.get("School Cost")}</p>
-        </div>
-        <div class="chart-section">
-          {chart_html}
-        </div>
-        <div class="description-section">
-          <h3>Profession Description</h3>
-          <hr />
-          <p>{civilian_desc}</p>
-          <h3>Military Equivalent</h3>
-          <hr />
-          <p>{military_desc}</p>
-        </div>
-        <div class="lifestyle-section">
-          <div class="lifestyle-title">
-            <h3>Summary of Lifestyle Choices</h3>
+        <div class="page-container">
+          <div class="header">
+            <h1>{name_str}'s Financial Projection</h1>
           </div>
-          {lifestyle_table_html}
-        </div>
-        <div class="note-section">
-          <p>{note_text}</p>
+          <div class="professional-details">
+            <p><strong>Profession:</strong> {common_info.get("Profession")}</p>
+            <p><strong>Annual Salary:</strong> {common_info.get("Average Salary")}</p>
+            <p><strong>Years of School:</strong> {common_info.get("Years of School")}</p>
+            <p><strong>Average Cost of School:</strong> {common_info.get("School Cost")}</p>
+          </div>
+          <div class="chart-section">
+            {chart_html}
+          </div>
+          <div class="description-section">
+            <h3>Profession Description</h3>
+            <hr />
+            <p>{civilian_desc}</p>
+            <h3>Military Equivalent</h3>
+            <hr />
+            <p>{military_desc}</p>
+          </div>
+          <div class="bottom-section">
+            <div class="lifestyle-section">
+              <div class="lifestyle-title">
+                <h3>Summary of Lifestyle Choices</h3>
+              </div>
+              {lifestyle_table_html}
+            </div>
+            <div class="note-section">
+              <p>{note_text}</p>
+            </div>
+          </div>
         </div>
       </body>
     </html>
