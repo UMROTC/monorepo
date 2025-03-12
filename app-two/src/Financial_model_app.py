@@ -459,12 +459,10 @@ def get_chart_image(chart_fig):
 
 def build_lifestyle_table(c_row):
     """
-    Builds an HTML table for lifestyle choices with a title bar.
+    Builds an HTML table for lifestyle choices with an internal title bar.
     The header row serves as the title "Summary of Lifestyle Choices".
     """
-    # Create header row as title bar spanning all columns.
     header_row = "<tr style='background-color:#ccc; font-size:12px;'><th colspan='{}'>Summary of Lifestyle Choices</th></tr>".format(len(lifestyle_columns)+1)
-    
     table_html = f"""
     <table style="width:100%; border-collapse: collapse;" border="1">
       <thead>
@@ -499,12 +497,14 @@ def generate_pair_report(c_row, m_row):
     
     Layout:
       TOP BLOCK:
-        - Header (Title) and Professional Details (Career Data)
-        - A middle two-column container:
-            Left column: Profession Description and Military Equivalent (anchored 20px below career data)
-            Right column: Fixed-size chart
-      BOTTOM BLOCK (anchored to bottom of page):
-        - Lifestyle Table (with built-in title bar)
+        - Header and Professional Details (Career Data)
+        - Middle container with two columns:
+            Left Column (fixed at 37.5% width): Profession Description and Military Equivalent,
+              anchored ~20px (0.25in) below the career data.
+            Right Column (fixed at 62.5% width): A fixed-size chart.
+      BOTTOM BLOCK (anchored to the bottom):
+        - Lifestyle Table with internal title bar,
+        - And the note text.
     """
     global profession_df
     common_info = get_common_info(c_row, skill_df)
@@ -522,9 +522,9 @@ def generate_pair_report(c_row, m_row):
     c_values = [get_networth_at(c_row, 1), get_networth_at(c_row, 120), get_networth_at(c_row, 240)]
     m_values = [get_networth_at(m_row, 1), get_networth_at(m_row, 120), get_networth_at(m_row, 240)]
     
-    # Create a fixed-size chart
+    # Create fixed-size chart (fixed height)
     import plotly.express as px
-    fixed_chart_height = 300  # Fixed chart height in pixels (adjust as needed)
+    fixed_chart_height = 300  # in pixels; adjust as needed
     chart_fig = px.line(
         x=years,
         y=c_values,
@@ -551,8 +551,14 @@ def generate_pair_report(c_row, m_row):
     
     lifestyle_table_html = build_lifestyle_table(c_row)
     name_str = c_row.get("Name", "Participant")
+    note_text = (
+        "This sheet depicts a simple net worth calculation that considers only two values - your monthly savings "
+        "compounding at 5% Annually, and your student debt, compounding at 6% Annually. The decisions that you made in the Budget Simulator program are displayed at the bottom, along with their associated costs. "
+        "The intent of this sheet is to project how student debt will affect your purchase power in the future. Scholarships and grants are great ways to pay for training you will need "
+        "in your future profession. The Military is one of many employers who will help pay for your training and education for your job. If you go straight to work after graduation, the cost associated with "
+        "that profession represents licensing, tools, and apprenticeships (if any)."
+    )
     
-    # Build HTML using a flex layout:
     report_html = f"""
     <html>
       <head>
@@ -570,20 +576,22 @@ def generate_pair_report(c_row, m_row):
             font-size: 12px;
             height: 100vh;
           }}
+          /* Flex container divides page into top and bottom blocks */
           .page-container {{
             display: flex;
             flex-direction: column;
             height: 100vh;
           }}
           .top-block {{
-            /* Top block will take the remaining space above the bottom block */
-            flex: 1;
             padding: 20px;
+            /* Takes available space above bottom block */
+            flex: 1;
+            /* Avoid page breaks within this block */
+            page-break-inside: avoid;
           }}
           .bottom-block {{
-            /* Bottom block anchored to the bottom */
             padding: 20px;
-            /* Ensure it does not break across pages */
+            /* Anchored at the bottom */
             page-break-inside: avoid;
           }}
           .header {{
@@ -605,17 +613,18 @@ def generate_pair_report(c_row, m_row):
             gap: 20px;
           }}
           .left-column {{
-            flex: 1;
-            /* Anchor the description block 20px below professional details */
-            margin-top: 20px;
+            /* Reduced width by ~25% relative to equal width */
+            flex: 3;
           }}
           .right-column {{
-            flex: 1;
-            /* Fixed chart container */
+            flex: 5;
             height: {fixed_chart_height}px;
           }}
+          /* Description section anchored 20px below professional details */
           .description-section {{
+            margin-top: 20px;
             font-size: 11px;
+            margin-bottom: 10px;
           }}
           .description-section h3 {{
             margin-bottom: 5px;
@@ -624,7 +633,16 @@ def generate_pair_report(c_row, m_row):
           .description-section hr {{
             margin-bottom: 5px;
           }}
-          /* Lifestyle table will have its own header row */
+          /* Bottom block: Lifestyle table with its internal header, then note text */
+          .lifestyle-section {{
+            margin-bottom: 10px;
+          }}
+          .note-section {{
+            border-top: 1px solid #000;
+            padding-top: 5px;
+            font-size: 10px;
+            text-align: left;
+          }}
           table {{
             width: 100%;
             border-collapse: collapse;
@@ -666,7 +684,12 @@ def generate_pair_report(c_row, m_row):
             </div>
           </div>
           <div class="bottom-block">
-            {lifestyle_table_html}
+            <div class="lifestyle-section">
+              {lifestyle_table_html}
+            </div>
+            <div class="note-section">
+              <p>{note_text}</p>
+            </div>
           </div>
         </div>
       </body>
@@ -715,7 +738,6 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
-
 
 
 
