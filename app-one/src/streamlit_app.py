@@ -13,6 +13,10 @@ from io import StringIO
 
 st.set_page_config(page_title="Budget Simulator", layout="wide")
 
+# Initialize session state for submission tracking
+if "submitted" not in st.session_state:
+    st.session_state.submitted = False
+
 # ----------------------------------------------------------------------------
 # 2. DEFINE FUNCTIONS
 # ----------------------------------------------------------------------------
@@ -199,7 +203,6 @@ def save_participant_data(data_frame, worksheet):
     except Exception as e:
         st.error(f"Failed to save participant data to Google Sheets: {e}")
 
-
 # ----------------------------------------------------------------------------
 # 3. MAIN APP LOGIC
 # ----------------------------------------------------------------------------
@@ -225,17 +228,24 @@ def main():
     Profession = st.selectbox("Select a Profession", skillset_data["Profession"])
     selected_Profession = skillset_data[skillset_data["Profession"] == Profession].iloc[0]
 
-    # Salary logic: if Requires School == "yes", use "Savings During School", else "Average Salary"
+    # Determine base salary based on profession requirements:
     if selected_Profession["Requires School"].lower() == "yes":
         salary = selected_Profession["Savings During School"]
     else:
         salary = selected_Profession["Average Salary"]
 
-    # Step 3: Marital Status
-    st.header("Step 3: Choose Your Marital Status")
-    marital_status = st.radio("Marital Status", ["Single", "Married"])
+    # Step 3: Military Service & Marital Status (Combined Input)
+    st.header("Step 3: Choose Your Military Service and Marital Status")
+    military_service_choice = st.selectbox(
+        "Select your military service option",
+        ["No", "Part Time", "Full Time"],
+        key="Military_Service"
+    )
+    marital_status = st.radio("Select your marital status", ["Single", "Married"])
 
-    # Calculate taxes
+    # (No salary adjustment for part time military is applied here)
+
+    # Now calculate tax based on the base salary
     taxable_income, federal_tax, state_tax, total_tax = calculate_tax_by_status(
         salary, marital_status, tax_data
     )
@@ -243,7 +253,7 @@ def main():
         (tax_data["Status"] == marital_status) & (tax_data["Type"] == "Federal")
     ].iloc[0]["Standard Deduction"]
 
-    # Display
+    # Display tax information
     st.write(f"**Annual Salary:** ${salary:,.2f}")
     st.write(f"**Standard Deduction:** ${standard_deduction:,.2f}")
     st.write(f"**Taxable Income:** ${taxable_income:,.2f}")
@@ -257,14 +267,7 @@ def main():
     # Track user choices in dictionaries
     selected_lifestyle_choices = {}
 
-    # Step 4: Military Service
-    st.header("Step 4: Military Service")
-    military_service_choice = st.selectbox(
-        "Choose your military service option",
-        ["No", "Part Time", "Full Time"],
-        key="Military_Service"
-    )
-    # Just store the text and a cost=0 placeholder
+    # Save military service choice into the lifestyle choices dictionary
     selected_lifestyle_choices["Military Service"] = {
         "Choice": military_service_choice,
         "Cost": 0
@@ -274,8 +277,8 @@ def main():
     allowed_military_part_time = ["Children", "Who Pays for College", "Health Insurance"]
     allowed_military_full_time = ["Housing", "Food", "Children", "Who Pays for College", "Health Insurance"]
 
-    # Step 5: Lifestyle Choices
-    st.header("Step 5: Make Lifestyle Choices")
+    # Step 4: Lifestyle Choices
+    st.header("Step 4: Make Lifestyle Choices")
 
     for category in lifestyle_data["Category"].unique():
         # We'll skip "Savings" until after collecting these
@@ -317,7 +320,7 @@ def main():
         # Store the chosen cost for now, but do NOT reduce any "running" budget
         selected_lifestyle_choices[category] = {"Choice": choice, "Cost": cost}
 
-    # Step 5b: Savings
+    # Step 4b: Savings
     st.subheader("Savings")
     savings_options = lifestyle_data[lifestyle_data["Category"] == "Savings"]["Option"].tolist()
     savings_choice = st.selectbox(
@@ -355,7 +358,7 @@ def main():
     selected_lifestyle_choices["Savings"] = {"Choice": savings_choice, "Cost": 0}  # We'll finalize cost below
 
     # -----------------------------
-    # CHANGED: Compute final budget
+    # Compute final budget
     # -----------------------------
 
     # 1) Sum up all non-savings costs
@@ -399,69 +402,72 @@ def main():
     else:
         remaining_budget_message.error(f"You have overspent by ${-remaining_budget:,.2f}!")
 
-    # Step 5c: Show Summary
+    # Step 4c: Show Summary
     st.subheader("Lifestyle Choices Summary")
     for cat, details in selected_lifestyle_choices.items():
         st.write(f"**{cat}:** {details['Choice']} - ${details['Cost']:,.2f}")
 
-    # Step 6: Submit
-    st.header("Step 6: Submit Your Budget")
+    # Step 5: Submit
+    st.header("Step 5: Submit Your Budget")
     st.write(f"**Remaining Budget:** ${remaining_budget:,.2f}")
 
-    # Authorize gspread client
-    gspread_client = authorize_gspread()
-    SHEET_KEY = "1rgS_NxsZjDkPE07kEpuYxvwktyROXKUfYBk-4t9bkqA"
+    # Check if submission already occurred via session state
+    if st.session_state.submitted:
+        st.info("You have already submitted your budget. Thank you!")
+    else:
+        submit = st.button("Submit")
+        if submit:
+            # Only allow submission if user has provided name, chosen profession,
+            # AND budget is exactly zero (no negative or positive leftover).
+            if not participant_name:
+                st.info("Please enter your name before submitting.")
+            elif not Profession:
+                st.info("Please select a profession before submitting.")
+            elif remaining_budget < 0:
+                st.error(
+                    f"You have overspent by ${abs(remaining_budget):,.2f}. "
+                    "Please adjust your expenses or income to balance the budget."
+                )
+            elif remaining_budget > 0:
+                st.error(
+                    f"You still have ${remaining_budget:,.2f} left. "
+                    "Please allocate all your income (e.g., increase savings) so your budget is exactly 0."
+                )
+            else:
+                # Build participant data dictionary
+                data = {
+                    "Name": participant_name,
+                    "Profession": Profession,
+                    "Marital Status": marital_status,
+                    "Military Service": military_service_choice,
+                    # Recommended tax details:
+                    "Annual Salary": salary,
+                    "Standard Deduction": standard_deduction,
+                    "Taxable Income": taxable_income,
+                    "Federal Tax": federal_tax,
+                    "State Tax": state_tax,
+                    "Total Tax": total_tax,
+                    "Monthly Income After Tax": monthly_income_after_tax,
+                }
 
-    submit = st.button("Submit")
-    if submit:
-        # Only allow submission if user has provided name, chosen profession,
-        # AND budget is exactly zero (no negative or positive leftover).
-        if not participant_name:
-            st.info("Please enter your name before submitting.")
-        elif not Profession:
-            st.info("Please select a profession before submitting.")
-        elif remaining_budget < 0:
-            st.error(
-                f"You have overspent by ${abs(remaining_budget):,.2f}. "
-                "Please adjust your expenses or income to balance the budget."
-            )
-        elif remaining_budget > 0:
-            st.error(
-                f"You still have ${remaining_budget:,.2f} left. "
-                "Please allocate all your income (e.g., increase savings) so your budget is exactly 0."
-            )
-        else:
-            # Build participant data dictionary
-            data = {
-                "Name": participant_name,
-                "Profession": Profession,
-                "Marital Status": marital_status,
-                "Military Service": military_service_choice,
+                # Add each lifestyle category cost EXCEPT 
+                # "Military Service" (already stored as text).
+                for category, details in selected_lifestyle_choices.items():
+                    if category == "Military Service":
+                        continue
+                    data[f"{category} Cost"] = details["Cost"]
+                    data[f"{category} Choice"] = details["Choice"]
 
-                # Recommended tax details:
-                "Annual Salary": salary,
-                "Standard Deduction": standard_deduction,
-                "Taxable Income": taxable_income,
-                "Federal Tax": federal_tax,
-                "State Tax": state_tax,
-                "Total Tax": total_tax,
-                "Monthly Income After Tax": monthly_income_after_tax,
-            }
+                data_df = pd.DataFrame([data])
 
-            # Add each lifestyle category cost EXCEPT 
-            # "Military Service" (already stored as text).
-            for category, details in selected_lifestyle_choices.items():
-                if category == "Military Service":
-                    continue
-                data[f"{category} Cost"] = details["Cost"]
-                data[f"{category} Choice"] = details["Choice"]
+                # Save to Google Sheet
+                gspread_client = authorize_gspread()
+                SHEET_KEY = "1rgS_NxsZjDkPE07kEpuYxvwktyROXKUfYBk-4t9bkqA"
+                worksheet = get_google_sheet(gspread_client, SHEET_KEY, "participant_data")
+                save_participant_data(data_df, worksheet)
 
-            data_df = pd.DataFrame([data])
-
-            # Save to Google Sheet
-            worksheet = get_google_sheet(gspread_client, SHEET_KEY, "participant_data")
-            save_participant_data(data_df, worksheet)
-
+                # Mark as submitted to prevent further submissions
+                st.session_state.submitted = True
 
 # ----------------------------------------------------------------------------
 # 4. EXECUTE MAIN FUNCTION
