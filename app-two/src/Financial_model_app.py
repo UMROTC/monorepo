@@ -575,11 +575,11 @@ def generate_pair_report(c_row, m_row):
           }}
           /* Chart section: move up further with a -2.0in bottom margin */
           .chart-section {{
-            margin-bottom: -2.0in;
+            margin-bottom: -3.0in;
           }}
           /* Description section: move down with a 1.25in top margin */
           .description-section {{
-            margin-top: 1.25in;
+            margin-top: 2.25in;
             font-size: 11px;
             margin-bottom: 10px;
           }}
