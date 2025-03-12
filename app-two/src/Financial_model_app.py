@@ -502,7 +502,7 @@ def generate_pair_report(c_row, m_row):
       - Professional details (left-aligned)
       - A net worth chart (static image) aligned to the right
       - Profession descriptions for civilian and military with horizontal rules,
-      - A two-row lifestyle table for the civilian participant with the table title anchored immediately above it
+      - A two-row lifestyle table for the civilian participant with a title immediately above it for "Summary of Lifestyle Choices"
       - A note at the bottom of the page
     """
     global profession_df
@@ -573,13 +573,13 @@ def generate_pair_report(c_row, m_row):
             margin-bottom: 10px;
             font-size: 11px;
           }}
-          /* Chart section moved up further by increasing negative margin */
+          /* Chart section: move up by increasing negative bottom margin */
           .chart-section {{
-            margin-bottom: -1in;
+            margin-bottom: -1.5in;
           }}
-          /* Description section: moved down by 1/2 inch (margin-top set to 1in) */
+          /* Description section: moved down by 1/4 inch more (total 1.25in top margin) */
           .description-section {{
-            margin-top: 1in;
+            margin-top: 1.25in;
             font-size: 11px;
             margin-bottom: 10px;
           }}
@@ -590,7 +590,7 @@ def generate_pair_report(c_row, m_row):
           .description-section hr {{
             margin-bottom: 5px;
           }}
-          /* Lifestyle section anchored: title immediately above the table */
+          /* Lifestyle section: title immediately above the table */
           .lifestyle-section {{
             margin-top: 0;
             font-size: 11px;
@@ -696,6 +696,7 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
 
 
