@@ -243,9 +243,9 @@ def main():
     )
     marital_status = st.radio("Select your marital status", ["Single", "Married"])
 
-    # (No salary adjustment for part time military is applied here)
+    # No salary adjustment is applied here
 
-    # Now calculate tax based on the base salary
+    # Calculate tax based on the base salary
     taxable_income, federal_tax, state_tax, total_tax = calculate_tax_by_status(
         salary, marital_status, tax_data
     )
@@ -329,7 +329,7 @@ def main():
         key="Savings_Choice"
     )
 
-    # We'll decide the actual savings cost after we see how much the user has left
+    # Decide the actual savings cost after we see how much the user has left
     calculated_savings = 0.0
     if savings_choice.lower() == "whatever is left":
         # We'll finalize "whatever is left" after we sum all other expenses
@@ -371,8 +371,6 @@ def main():
     # 2) If the user chose "whatever is left" for savings,
     #    then "calculated_savings" is None. We compute after expenses:
     if calculated_savings is None:
-        # If monthly_income_after_tax - total_expenses is already negative,
-        # there's nothing left to save
         if (monthly_income_after_tax - total_expenses) <= 0:
             st.warning("You have no remaining budget to save—your expenses exceed your income.")
             calculated_savings = 0
@@ -392,7 +390,6 @@ def main():
     remaining_budget_display = st.sidebar.empty()
     remaining_budget_message = st.sidebar.empty()
 
-    # Show the updated sidebar info
     remaining_budget_display.markdown(f"### Remaining Monthly Budget: ${remaining_budget:,.2f}")
 
     if remaining_budget > 0:
@@ -402,23 +399,21 @@ def main():
     else:
         remaining_budget_message.error(f"You have overspent by ${-remaining_budget:,.2f}!")
 
-    # Step 4c: Show Summary
     st.subheader("Lifestyle Choices Summary")
     for cat, details in selected_lifestyle_choices.items():
         st.write(f"**{cat}:** {details['Choice']} - ${details['Cost']:,.2f}")
 
+    # -----------------------------
     # Step 5: Submit
+    # -----------------------------
     st.header("Step 5: Submit Your Budget")
     st.write(f"**Remaining Budget:** ${remaining_budget:,.2f}")
 
-    # Check if submission already occurred via session state
     if st.session_state.submitted:
         st.info("You have already submitted your budget. Thank you!")
     else:
         submit = st.button("Submit")
         if submit:
-            # Only allow submission if user has provided name, chosen profession,
-            # AND budget is exactly zero (no negative or positive leftover).
             if not participant_name:
                 st.info("Please enter your name before submitting.")
             elif not Profession:
@@ -440,7 +435,6 @@ def main():
                     "Profession": Profession,
                     "Marital Status": marital_status,
                     "Military Service": military_service_choice,
-                    # Recommended tax details:
                     "Annual Salary": salary,
                     "Standard Deduction": standard_deduction,
                     "Taxable Income": taxable_income,
@@ -450,8 +444,7 @@ def main():
                     "Monthly Income After Tax": monthly_income_after_tax,
                 }
 
-                # Add each lifestyle category cost EXCEPT 
-                # "Military Service" (already stored as text).
+                # Add each lifestyle category cost and choice (except Military Service)
                 for category, details in selected_lifestyle_choices.items():
                     if category == "Military Service":
                         continue
@@ -460,14 +453,38 @@ def main():
 
                 data_df = pd.DataFrame([data])
 
-                # Save to Google Sheet
+                # Save original submission to Google Sheet
                 gspread_client = authorize_gspread()
                 SHEET_KEY = "1rgS_NxsZjDkPE07kEpuYxvwktyROXKUfYBk-4t9bkqA"
                 worksheet = get_google_sheet(gspread_client, SHEET_KEY, "participant_data")
                 save_participant_data(data_df, worksheet)
 
-                # Mark as submitted to prevent further submissions
+                # Mark as submitted
                 st.session_state.submitted = True
+
+                # ----------------------------------------------------------------------
+                # Create -mil Doppelganger
+                # ----------------------------------------------------------------------
+                # Duplicate the original data dictionary for the doppelganger record
+                doppel_data = data.copy()
+
+                # Force military service to "Part Time"
+                doppel_data["Military Service"] = "Part Time"
+
+                # Override specific lifestyle choices if applicable:
+                # a. For Children: if cost is nonzero, set choice to "Military"
+                if "Children Cost" in doppel_data and float(doppel_data["Children Cost"]) != 0:
+                    doppel_data["Children Choice"] = "Military"
+                # b. Who Pays for College: set choice to "Military"
+                if "Who Pays for College Choice" in doppel_data:
+                    doppel_data["Who Pays for College Choice"] = "Military"
+                # c. Health Insurance: set choice to "Military"
+                if "Health Insurance Choice" in doppel_data:
+                    doppel_data["Health Insurance Choice"] = "Military"
+
+                doppel_df = pd.DataFrame([doppel_data])
+                # Save the doppelganger record to the same Google Sheet
+                save_participant_data(doppel_df, worksheet)
 
 # ----------------------------------------------------------------------------
 # 4. EXECUTE MAIN FUNCTION
