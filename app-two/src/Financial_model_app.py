@@ -576,11 +576,11 @@ def generate_pair_report(c_row, m_row):
           }}
           /* Net Worth Chart moved up by reducing bottom margin */
           .chart-section {{
-            margin-bottom: -1.25in;
+            margin-bottom: -.50in;
           }}
           /* Description section moved up by reducing top margin to 0.5in */
           .description-section {{
-            margin-top: 0.85in;
+            margin-top: 1.00in;
             font-size: 11px;
             margin-bottom: 10px;
           }}
