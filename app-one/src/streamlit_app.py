@@ -484,14 +484,21 @@ def main():
                 # c. Health Insurance: set choice to "Military"
                 if "Health Insurance Choice" in doppel_data:
                     doppel_data["Health Insurance Choice"] = "Military"
+                    # Update the Health Insurance cost using the cost for the Military option
+                    mil_health_row = lifestyle_data[
+                        (lifestyle_data["Category"] == "Health Insurance") &
+                        (lifestyle_data["Option"] == "Military")
+                    ]
+                    if not mil_health_row.empty:
+                        try:
+                            mil_health_cost = float(mil_health_row["Monthly Cost"].values[0])
+                        except ValueError:
+                            mil_health_cost = 0
+                        doppel_data["Health Insurance Cost"] = mil_health_cost
 
                 doppel_df = pd.DataFrame([doppel_data])
                 # Save the doppelganger record to the same Google Sheet
                 save_participant_data(doppel_df, worksheet)
-
-# ----------------------------------------------------------------------------
-# 4. EXECUTE MAIN FUNCTION
-# ----------------------------------------------------------------------------
 
 if __name__ == "__main__":
     main()
