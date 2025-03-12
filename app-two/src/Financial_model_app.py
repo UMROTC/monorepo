@@ -581,7 +581,7 @@ def generate_pair_report(c_row, m_row):
           .description-section {{
             margin-top: 1.80in;
             font-size: 11px;
-            padding-bottom: 5px;
+            margin-bottom: -.95;
           }}
           .description-section h3 {{
             margin-bottom: 5px;
