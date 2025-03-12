@@ -544,11 +544,11 @@ def generate_pair_report(c_row, m_row):
     chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
     chart_fig.update_layout(height=fixed_chart_height)
     chart_fig.update_layout(legend=dict(
-        orientation="h",
+        orientation="v",
         yanchor="top",
         y=1.02,
         xanchor="left",
-        x=1
+        x=-10
     ))
     chart_html = get_chart_image(chart_fig)
     
