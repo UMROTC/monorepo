@@ -548,7 +548,7 @@ def generate_pair_report(c_row, m_row):
         yanchor="top",
         y=1.02,
         xanchor="left",
-        x=-.1
+        x=.15
     ))
     chart_html = get_chart_image(chart_fig)
     
