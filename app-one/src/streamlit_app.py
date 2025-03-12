@@ -468,6 +468,9 @@ def main():
                 # Duplicate the original data dictionary for the doppelganger record
                 doppel_data = data.copy()
 
+                # Update the name field to include "-mil" suffix
+                doppel_data["Name"] = f"{participant_name}-mil"
+
                 # Force military service to "Part Time"
                 doppel_data["Military Service"] = "Part Time"
 
