@@ -579,7 +579,7 @@ def generate_pair_report(c_row, m_row):
           }}
           /* Description section: move text columns down an extra 1.5" by setting top margin to 2.75in */
           .description-section {{
-            margin-top: 2.75in;
+            margin-top: 2.00in;
             font-size: 11px;
             margin-bottom: 0.85in;
           }}
@@ -599,7 +599,7 @@ def generate_pair_report(c_row, m_row):
             text-align: center;
             font-size: 12px;
             margin: 0;
-            padding-bottom: 5px;
+            padding-bottom: 3px;
           }}
           table {{
             margin-top: 0;
