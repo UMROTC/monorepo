@@ -577,9 +577,9 @@ def generate_pair_report(c_row, m_row):
           .chart-section {{
             margin-bottom: 10px;
           }}
-          /* Description section moved down 2 inches */
+          /* Description section moved up by reducing top margin to 1.25in */
           .description-section {{
-            margin-top: 2in;
+            margin-top: 1.25in;
             font-size: 11px;
             margin-bottom: 10px;
           }}
@@ -694,4 +694,5 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
