@@ -500,11 +500,10 @@ def generate_pair_report(c_row, m_row):
         - Header and Professional Details (Career Data)
         - Middle container with two columns:
             Left Column (fixed at 37.5% width): Profession Description and Military Equivalent,
-              anchored ~20px (0.25in) below the career data.
+              anchored ~20px below the career data.
             Right Column (fixed at 62.5% width): A fixed-size chart.
       BOTTOM BLOCK (anchored to the bottom):
-        - Lifestyle Table with internal title bar,
-        - And the note text.
+        - Lifestyle Table with internal title bar and note text.
     """
     global profession_df
     common_info = get_common_info(c_row, skill_df)
@@ -522,9 +521,9 @@ def generate_pair_report(c_row, m_row):
     c_values = [get_networth_at(c_row, 1), get_networth_at(c_row, 120), get_networth_at(c_row, 240)]
     m_values = [get_networth_at(m_row, 1), get_networth_at(m_row, 120), get_networth_at(m_row, 240)]
     
-    # Create fixed-size chart (fixed height)
+    # Create a fixed-size chart with a fixed height increased by 50%
     import plotly.express as px
-    fixed_chart_height = 300  # in pixels; adjust as needed
+    fixed_chart_height = 450  # Increased from 300px to 450px
     chart_fig = px.line(
         x=years,
         y=c_values,
@@ -559,6 +558,7 @@ def generate_pair_report(c_row, m_row):
         "that profession represents licensing, tools, and apprenticeships (if any)."
     )
     
+    # Build the HTML using a flex layout where the bottom block is anchored at the bottom.
     report_html = f"""
     <html>
       <head>
@@ -576,22 +576,19 @@ def generate_pair_report(c_row, m_row):
             font-size: 12px;
             height: 100vh;
           }}
-          /* Flex container divides page into top and bottom blocks */
           .page-container {{
             display: flex;
             flex-direction: column;
             height: 100vh;
+            justify-content: space-between;
           }}
           .top-block {{
             padding: 20px;
-            /* Takes available space above bottom block */
             flex: 1;
-            /* Avoid page breaks within this block */
             page-break-inside: avoid;
           }}
           .bottom-block {{
             padding: 20px;
-            /* Anchored at the bottom */
             page-break-inside: avoid;
           }}
           .header {{
@@ -613,14 +610,13 @@ def generate_pair_report(c_row, m_row):
             gap: 20px;
           }}
           .left-column {{
-            /* Reduced width by ~25% relative to equal width */
-            flex: 3;
+            flex: 3; /* Approximately 37.5% width */
           }}
           .right-column {{
-            flex: 5;
+            flex: 5; /* Approximately 62.5% width */
             height: {fixed_chart_height}px;
           }}
-          /* Description section anchored 20px below professional details */
+          /* Description section: anchored 20px below professional details */
           .description-section {{
             margin-top: 20px;
             font-size: 11px;
@@ -633,16 +629,7 @@ def generate_pair_report(c_row, m_row):
           .description-section hr {{
             margin-bottom: 5px;
           }}
-          /* Bottom block: Lifestyle table with its internal header, then note text */
-          .lifestyle-section {{
-            margin-bottom: 10px;
-          }}
-          .note-section {{
-            border-top: 1px solid #000;
-            padding-top: 5px;
-            font-size: 10px;
-            text-align: left;
-          }}
+          /* Bottom block: Lifestyle table with note anchored at the bottom */
           table {{
             width: 100%;
             border-collapse: collapse;
@@ -652,6 +639,13 @@ def generate_pair_report(c_row, m_row):
             text-align: center;
             border: 1px solid #000;
             font-size: 10px;
+          }}
+          .note-section {{
+            margin-top: 10px;
+            font-size: 10px;
+            text-align: left;
+            border-top: 1px solid #000;
+            padding-top: 5px;
           }}
         </style>
       </head>
@@ -738,6 +732,7 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
 
 
