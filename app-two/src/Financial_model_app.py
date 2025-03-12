@@ -500,7 +500,7 @@ def generate_pair_report(c_row, m_row):
     Layout:
       - Title: "(Participant's Name)'s Financial Projection" (centered)
       - Professional details (left-aligned)
-      - A net worth chart (static image) aligned to the right
+      - A net worth chart (static image) aligned to the right (with reduced size)
       - Profession descriptions for civilian and military with horizontal rules,
       - A two-row lifestyle table for the civilian participant with a title immediately above it for "Summary of Lifestyle Choices"
       - A note at the bottom of the page
@@ -540,6 +540,9 @@ def generate_pair_report(c_row, m_row):
     min_val = min([v for v in c_values + m_values if v is not None], default=0)
     max_val = max([v for v in c_values + m_values if v is not None], default=0)
     chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
+    # Reduce chart height by 15% (set a fixed height; adjust as needed)
+    chart_fig.update_layout(height=chart_fig.layout.height or 400)
+    chart_fig.update_layout(height=int((chart_fig.layout.height or 400) * 0.85))
     chart_html = get_chart_image(chart_fig)
     lifestyle_table_html = build_lifestyle_table(c_row)
     name_str = c_row.get("Name", "Participant")
@@ -573,13 +576,13 @@ def generate_pair_report(c_row, m_row):
             margin-bottom: 10px;
             font-size: 11px;
           }}
-          /* Chart section remains unchanged */
+          /* Chart section remains with same negative top margin */
           .chart-section {{
             margin-top: -1.0in;
           }}
-          /* Description section: set top margin to 2.0in (moved up by 0.75in from previous 2.75in) */
+          /* Description section: set top margin to 0.5in (48px) below professional details */
           .description-section {{
-            margin-top: 2.0in;
+            margin-top: 0.5in;
             font-size: 11px;
             margin-bottom: 0.85in;
           }}
@@ -696,5 +699,8 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
+   
+
 
 
