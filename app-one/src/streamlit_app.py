@@ -401,6 +401,9 @@ def main():
 
     st.subheader("Lifestyle Choices Summary")
     for cat, details in selected_lifestyle_choices.items():
+        # Skip Military Service from the summary display
+        if cat == "Military Service":
+            continue
         st.write(f"**{cat}:** {details['Choice']} - ${details['Cost']:,.2f}")
 
     # -----------------------------
@@ -481,10 +484,10 @@ def main():
                 # b. Who Pays for College: set choice to "Military"
                 if "Who Pays for College Choice" in doppel_data:
                     doppel_data["Who Pays for College Choice"] = "Military"
-                # c. Health Insurance: set choice to "Military"
+                # c. Health Insurance: set choice to "Military" and update cost accordingly
                 if "Health Insurance Choice" in doppel_data:
                     doppel_data["Health Insurance Choice"] = "Military"
-                    # Update the Health Insurance cost using the cost for the Military option
+                    # Look up the Military option for Health Insurance
                     mil_health_row = lifestyle_data[
                         (lifestyle_data["Category"] == "Health Insurance") &
                         (lifestyle_data["Option"] == "Military")
