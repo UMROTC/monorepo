@@ -104,10 +104,6 @@ if "profession" in gi_bill_df.columns:
 if "profession" in participant_df.columns:
     participant_df.rename(columns={"profession": "Profession"}, inplace=True)
 
-print("Participant data columns:", participant_df.columns.tolist())
-print("Skillset cost worksheet columns:", skill_df.columns.tolist())
-print("GI Bill data columns:", gi_bill_df.columns.tolist())
-
 # -------------------------------------------------------------------------
 # 4. Calculate Monthly Net Worth
 # -------------------------------------------------------------------------
