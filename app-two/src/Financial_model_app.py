@@ -380,8 +380,7 @@ profession_data_path = repo_root / 'app-two' / 'data' / 'input' / 'Profession_Da
 try:
     profession_df = pd.read_csv(profession_data_path, encoding='utf-8-sig')
     profession_df.columns = [col.strip().lower() for col in profession_df.columns]
-    # Remove debug output below if not needed:
-    # st.write("Profession Data columns:", profession_df.columns.tolist())
+    # Debug output removed.
 except Exception as e:
     st.error(f"Error loading Profession Data file: {e}")
     st.stop()
@@ -503,7 +502,7 @@ def generate_pair_report(c_row, m_row):
       - Professional details (left-aligned)
       - A net worth chart (static image) aligned to the right
       - Profession descriptions for civilian and military with horizontal rules,
-      - A two-row lifestyle table for the civilian participant with the table title anchored to its table
+      - A two-row lifestyle table for the civilian participant with the table title anchored immediately above it
       - A note at the bottom of the page
     """
     global profession_df
@@ -574,13 +573,13 @@ def generate_pair_report(c_row, m_row):
             margin-bottom: 10px;
             font-size: 11px;
           }}
-          /* Net Worth Chart moved up by reducing bottom margin */
+          /* Chart section moved up further by increasing negative margin */
           .chart-section {{
-            margin-bottom: -.50in
+            margin-bottom: -1in;
           }}
-          /* Description section moved up by reducing top margin to 0.5in */
+          /* Description section: moved down by 1/2 inch (margin-top set to 1in) */
           .description-section {{
-            margin-top: 1.00in;
+            margin-top: 1in;
             font-size: 11px;
             margin-bottom: 10px;
           }}
@@ -591,7 +590,7 @@ def generate_pair_report(c_row, m_row):
           .description-section hr {{
             margin-bottom: 5px;
           }}
-          /* Lifestyle section anchored to its table with no extra top margin */
+          /* Lifestyle section anchored: title immediately above the table */
           .lifestyle-section {{
             margin-top: 0;
             font-size: 11px;
@@ -599,10 +598,11 @@ def generate_pair_report(c_row, m_row):
           .lifestyle-title {{
             text-align: center;
             font-size: 12px;
-            margin-bottom: 5px;
+            margin: 0;
+            padding-bottom: 5px;
           }}
           table {{
-            margin-top: 0px;
+            margin-top: 0;
             border-collapse: collapse;
           }}
           th, td {{
@@ -696,6 +696,7 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
 
 
