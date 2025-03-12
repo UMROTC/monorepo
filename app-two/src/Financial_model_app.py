@@ -575,11 +575,11 @@ def generate_pair_report(c_row, m_row):
           }}
           /* Chart section: move up further with a -2.0in bottom margin */
           .chart-section {{
-            margin-bottom: -3.0in;
+            margin-top: -1.0in;
           }}
           /* Description section: move down with a 1.25in top margin */
           .description-section {{
-            margin-top: 2.25in;
+            margin-bottom: -.85in;
             font-size: 11px;
             margin-bottom: 10px;
           }}
@@ -592,7 +592,7 @@ def generate_pair_report(c_row, m_row):
           }}
           /* Lifestyle section: move table up by using a negative top margin */
           .lifestyle-section {{
-            margin-top: -0.5in;
+            margin-top: -1in;
             font-size: 11px;
           }}
           .lifestyle-title {{
