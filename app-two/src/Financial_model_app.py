@@ -496,14 +496,11 @@ def generate_pair_report(c_row, m_row):
     Generates an HTML report for a civilian (c_row) and military (m_row) participant pair.
     
     Layout:
-      TOP BLOCK:
-        - Header and Professional Details (Career Data)
-        - Middle container with two columns:
-            Left Column (fixed at 37.5% width): Profession Description and Military Equivalent,
-              anchored ~20px below the career data.
-            Right Column (fixed at 62.5% width): A fixed-size chart.
-      BOTTOM BLOCK (anchored to the bottom):
-        - Lifestyle Table with internal title bar and note text.
+      TOP BLOCK (divided into two columns):
+        - LEFT COLUMN (37.5% width): Contains the page header, professional details,
+          Profession Description, and Military Equivalent.
+        - RIGHT COLUMN (62.5% width): Contains the fixed-size chart.
+      BOTTOM BLOCK (anchored at the bottom): Contains the lifestyle table and the note text.
     """
     global profession_df
     common_info = get_common_info(c_row, skill_df)
@@ -521,9 +518,9 @@ def generate_pair_report(c_row, m_row):
     c_values = [get_networth_at(c_row, 1), get_networth_at(c_row, 120), get_networth_at(c_row, 240)]
     m_values = [get_networth_at(m_row, 1), get_networth_at(m_row, 120), get_networth_at(m_row, 240)]
     
-    # Create a fixed-size chart with a fixed height increased by 50%
+    # Create a fixed-size chart with a fixed height (increased by 50% from 300px to 450px)
     import plotly.express as px
-    fixed_chart_height = 450  # Increased from 300px to 450px
+    fixed_chart_height = 450
     chart_fig = px.line(
         x=years,
         y=c_values,
@@ -558,7 +555,6 @@ def generate_pair_report(c_row, m_row):
         "that profession represents licensing, tools, and apprenticeships (if any)."
     )
     
-    # Build the HTML using a flex layout where the bottom block is anchored at the bottom.
     report_html = f"""
     <html>
       <head>
@@ -576,21 +572,34 @@ def generate_pair_report(c_row, m_row):
             font-size: 12px;
             height: 100vh;
           }}
+          /* Main container with two vertical blocks: top and bottom */
           .page-container {{
             display: flex;
             flex-direction: column;
             height: 100vh;
-            justify-content: space-between;
           }}
+          /* Top block: two columns */
           .top-block {{
-            padding: 20px;
+            display: flex;
             flex: 1;
-            page-break-inside: avoid;
-          }}
-          .bottom-block {{
             padding: 20px;
+            box-sizing: border-box;
+            /* Avoid breaking inside this block */
             page-break-inside: avoid;
           }}
+          .left-column {{
+            flex: 3; /* Approximately 37.5% of width */
+            display: flex;
+            flex-direction: column;
+          }}
+          .right-column {{
+            flex: 5; /* Approximately 62.5% of width */
+            height: {fixed_chart_height}px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }}
+          /* Left column content */
           .header {{
             text-align: center;
             margin-bottom: 10px;
@@ -603,22 +612,8 @@ def generate_pair_report(c_row, m_row):
             margin-bottom: 10px;
             font-size: 11px;
           }}
-          /* Middle container with two columns */
-          .middle-container {{
-            display: flex;
-            flex-direction: row;
-            gap: 20px;
-          }}
-          .left-column {{
-            flex: 3; /* Approximately 37.5% width */
-          }}
-          .right-column {{
-            flex: 5; /* Approximately 62.5% width */
-            height: {fixed_chart_height}px;
-          }}
-          /* Description section: anchored 20px below professional details */
           .description-section {{
-            margin-top: 20px;
+            margin-top: 20px; /* Anchored ~20px below career data */
             font-size: 11px;
             margin-bottom: 10px;
           }}
@@ -629,7 +624,13 @@ def generate_pair_report(c_row, m_row):
           .description-section hr {{
             margin-bottom: 5px;
           }}
-          /* Bottom block: Lifestyle table with note anchored at the bottom */
+          /* Bottom block: anchored at the bottom */
+          .bottom-block {{
+            padding: 20px;
+            box-sizing: border-box;
+            page-break-inside: avoid;
+          }}
+          /* Lifestyle table uses internal header; note text below */
           table {{
             width: 100%;
             border-collapse: collapse;
@@ -652,35 +653,31 @@ def generate_pair_report(c_row, m_row):
       <body>
         <div class="page-container">
           <div class="top-block">
-            <div class="header">
-              <h1>{name_str}'s Financial Projection</h1>
-            </div>
-            <div class="professional-details">
-              <p><strong>Profession:</strong> {common_info.get("Profession")}</p>
-              <p><strong>Annual Salary:</strong> {common_info.get("Average Salary")}</p>
-              <p><strong>Years of School:</strong> {common_info.get("Years of School")}</p>
-              <p><strong>Average Cost of School:</strong> {common_info.get("School Cost")}</p>
-            </div>
-            <div class="middle-container">
-              <div class="left-column">
-                <div class="description-section">
-                  <h3>Profession Description</h3>
-                  <hr />
-                  <p>{civilian_desc}</p>
-                  <h3>Military Equivalent</h3>
-                  <hr />
-                  <p>{military_desc}</p>
-                </div>
+            <div class="left-column">
+              <div class="header">
+                <h1>{name_str}'s Financial Projection</h1>
               </div>
-              <div class="right-column">
-                {chart_html}
+              <div class="professional-details">
+                <p><strong>Profession:</strong> {common_info.get("Profession")}</p>
+                <p><strong>Annual Salary:</strong> {common_info.get("Average Salary")}</p>
+                <p><strong>Years of School:</strong> {common_info.get("Years of School")}</p>
+                <p><strong>Average Cost of School:</strong> {common_info.get("School Cost")}</p>
               </div>
+              <div class="description-section">
+                <h3>Profession Description</h3>
+                <hr />
+                <p>{civilian_desc}</p>
+                <h3>Military Equivalent</h3>
+                <hr />
+                <p>{military_desc}</p>
+              </div>
+            </div>
+            <div class="right-column">
+              {chart_html}
             </div>
           </div>
           <div class="bottom-block">
-            <div class="lifestyle-section">
-              {lifestyle_table_html}
-            </div>
+            {lifestyle_table_html}
             <div class="note-section">
               <p>{note_text}</p>
             </div>
@@ -732,6 +729,7 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
 
 
