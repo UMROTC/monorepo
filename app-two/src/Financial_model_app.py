@@ -577,9 +577,9 @@ def generate_pair_report(c_row, m_row):
           .chart-section {{
             margin-bottom: 10px;
           }}
-          /* Description section moved 1 inch higher */
+          /* Description section moved 1 inch higher using negative margin */
           .description-section {{
-            margin-top: 1.25in;
+            margin-top: -1in;
             font-size: 11px;
             margin-bottom: 10px;
           }}
