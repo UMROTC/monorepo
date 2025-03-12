@@ -91,12 +91,12 @@ except Exception as e:
     print(f"Error loading files: {e}")
     exit()
 
-# 1. Standardize column names by stripping whitespace (preserve capitalization)
+# Standardize column names by stripping whitespace (preserve capitalization)
 participant_df.columns = participant_df.columns.str.strip()
 skill_df.columns       = skill_df.columns.str.strip()
 gi_bill_df.columns     = gi_bill_df.columns.str.strip()
 
-# 2. Rename "profession" -> "Profession" in skill_df, gi_bill_df, participant_df if it exists
+# Rename "profession" -> "Profession" if it exists
 if "profession" in skill_df.columns:
     skill_df.rename(columns={"profession": "Profession"}, inplace=True)
 if "profession" in gi_bill_df.columns:
@@ -108,24 +108,6 @@ print("Participant data columns:", participant_df.columns.tolist())
 print("Skillset cost worksheet columns:", skill_df.columns.tolist())
 print("GI Bill data columns:", gi_bill_df.columns.tolist())
 
-# 3. Optional debug loop: Check if each participant's Profession exists in the appropriate financial data
-for i, row in participant_df.iterrows():
-    ms = str(row.get("Military Service", "")).strip()
-    # Decide which sheet to match
-    if ms.lower() == "no":
-        loan_source = skill_df
-    else:
-        loan_source = gi_bill_df
-
-    # Extract the participant's Profession (capitalized column now)
-    prof = str(row.get("Profession", "")).strip()
-
-    # Compare with "Profession" in loan_source
-    matching = loan_source.loc[loan_source["Profession"].str.strip() == prof]
-    if matching.empty:
-        print(f"[DEBUG] Row={i}, Name='{row.get('Name')}', Profession='{row.get('Profession')}'"
-              f" => NOT FOUND in {'skill_df' if ms.lower()=='no' else 'gi_bill_df'}")
-
 # -------------------------------------------------------------------------
 # 4. Calculate Monthly Net Worth
 # -------------------------------------------------------------------------
@@ -133,23 +115,17 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
     total_months = 300
     monthly_rate = (1 + 0.05) ** (1/12) - 1  # Approximately 0.00407 per month
 
-    # 1) Decide which financial data to use based on Military Service
+    # Decide which financial data to use based on Military Service
     military_status = str(row.get("Military Service", "")).strip()
-    if military_status.lower() == "no":
-        loan_source = skill_df.copy()
-    else:
-        loan_source = gi_bill_df.copy()
+    loan_source = skill_df.copy() if military_status.lower() == "no" else gi_bill_df.copy()
 
-    # 2) Save the original profession (for display) and standardize for lookup (only stripping whitespace)
+    # Standardize profession for lookup
     original_profession = row.get("Profession", "").strip()
-    loan_source.columns = loan_source.columns.str.strip()  # Preserve capitalization
-    # For matching, we use the exact string after stripping extra whitespace
     profession = original_profession
 
-    # 3) Filter the financial data by profession
+    # Filter the financial data by profession
     subset = loan_source.loc[loan_source["Profession"].str.strip() == profession]
     if subset.empty:
-        print(f"[DEBUG] Profession '{profession}' not found in the selected loan source.")
         default_financials = []
         for m in range(1, total_months + 1):
             default_financials.append({
@@ -162,16 +138,12 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
         return default_financials
     loan_row = subset.iloc[0]
 
-    # 4) Retrieve financial parameters from the financial data row
+    # Retrieve financial parameters
     try:
-        # For non-military participants, these values come from the CSV.
-        # For military participants, the in-school values still come from CSV,
-        # but the post-school savings will be overridden with participant data.
         months_school = int(loan_row.get("Months School", 0))
         monthly_in_school_savings = float(loan_row.get("Monthly Savings in School", 0.0))
         monthly_post_school_savings = float(loan_row.get("Monthly Savings", 0.0))
     except Exception as e:
-        print(f"[DEBUG] Error reading financial parameters for profession '{profession}': {e}")
         default_financials = []
         for m in range(1, total_months + 1):
             default_financials.append({
@@ -183,20 +155,17 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
             })
         return default_financials
 
-    # 5) For military participants, override the after-school savings value with the one from Participant Data.
+    # For military participants, override post-school savings with participant data.
     if military_status.lower() != "no":
         try:
-            # Override post-school savings with the value in the participant data.
             monthly_post_school_savings = float(row.get("Monthly Savings", monthly_post_school_savings))
         except Exception as e:
-            print(f"[DEBUG] Error reading participant after-school savings for profession '{profession}': {e}")
             monthly_post_school_savings = 0.0
 
-    # 6) Extract monthly loan values from the financial data row
+    # Extract monthly loan values from the financial data row
     try:
         loan_values = loan_row[[f"month {i}" for i in range(1, total_months + 1)]].astype(float).values
     except Exception as e:
-        print(f"[DEBUG] Error extracting loan values for profession '{profession}': {e}")
         default_financials = []
         for m in range(1, total_months + 1):
             default_financials.append({
@@ -208,27 +177,22 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
             })
         return default_financials
 
-    # 7) Compute monthly accrued savings with the proper timing:
+    # Compute monthly accrued savings
     accrued_savings = []
     for m in range(1, total_months + 1):
         if months_school > 0 and m <= months_school:
-            # In-school period: add only the in-school savings (no compounding)
             if m == 1:
                 current_savings = monthly_in_school_savings
             else:
                 current_savings = accrued_savings[-1] + monthly_in_school_savings
-            print(f"Month {m}: IN-SCHOOL. Added {monthly_in_school_savings}; Total Savings: {current_savings}")
         else:
-            # Post-school period: compound previous savings and add post-school savings
             if m == 1:
-                # This case occurs if months_school is 0.
                 current_savings = monthly_post_school_savings
             else:
                 current_savings = accrued_savings[-1] * (1 + monthly_rate) + monthly_post_school_savings
-            print(f"Month {m}: POST-SCHOOL. Added {monthly_post_school_savings}; Total Savings: {current_savings}")
         accrued_savings.append(current_savings)
 
-    # 8) Compute monthly net worth as the sum of accrued savings and the corresponding loan value
+    # Compute monthly net worth as the sum of accrued savings and the corresponding loan value
     monthly_financials = []
     for m in range(1, total_months + 1):
         idx = m - 1
@@ -238,12 +202,12 @@ def calculate_monthly_financials(row, skill_df, gi_bill_df):
             "Accrued Savings": accrued_savings[idx],
             "Loan Value": loan_values[idx],
             "Net Worth": net_worth,
-            "Profession": original_profession  # Preserve original capitalization for display
+            "Profession": original_profession
         })
 
     return monthly_financials
 
-# Apply the calculation function to each participant (using participant_df)
+# Apply the calculation function to each participant
 participant_df["Net Worth Over Time"] = participant_df.apply(
     lambda row: calculate_monthly_financials(row, skill_df, gi_bill_df),
     axis=1
@@ -264,7 +228,7 @@ for _, row in participant_df.iterrows():
     for record in row["Net Worth Over Time"]:
         expanded_rows.append({
             "Name": row["Name"],
-            "profession": row["Profession"],  # Participant's profession (capitalized)
+            "profession": row["Profession"],
             "Month": record["Month"],
             "Savings Balance": record["Accrued Savings"],
             "Loan Balance": record["Loan Value"],
@@ -298,7 +262,7 @@ fig = px.bar(
     x="Net Worth",
     y="Name",
     orientation="h",
-    color="profession",  # Use the capitalized profession for color grouping
+    color="profession",
     animation_frame="Month",
     text="Net Worth Label",
     title="Net Worth Over 25 Years - Yearly Slider & Pause Fix",
@@ -311,15 +275,11 @@ fig = px.bar(
 )
 fig.update_traces(textposition="outside", cliponaxis=False)
 
-# -------------------------------------------------------------------------
 # Remove Default Slider & Updatemenus from Plotly Express
-# -------------------------------------------------------------------------
 fig.layout.sliders = []
 fig.layout.updatemenus = []
 
-# -------------------------------------------------------------------------
-# 11. Define Custom Slider Steps (Yearly)
-# -------------------------------------------------------------------------
+# Define Custom Slider Steps (Yearly)
 slider_steps = []
 for year in range(1, 26):
     final_month = year * 12
@@ -344,9 +304,7 @@ custom_slider = dict(
     currentvalue={"prefix": "Jump to: "}
 )
 
-# -------------------------------------------------------------------------
-# 12. Define Play/Pause Buttons
-# -------------------------------------------------------------------------
+# Define Play/Pause Buttons
 play_pause_menu = dict(
     type="buttons",
     direction="left",
@@ -370,9 +328,7 @@ play_pause_menu = dict(
     ]
 )
 
-# -------------------------------------------------------------------------
-# 13. Update Figure Layout with Custom Slider & Buttons
-# -------------------------------------------------------------------------
+# Update Figure Layout with Custom Slider & Buttons
 fig.update_layout(
     title=dict(
         text="Net Worth Over Time",
@@ -401,9 +357,7 @@ fig.update_layout(
     ),
 )
 
-# -------------------------------------------------------------------------
-# 14. Save the Figure to HTML and Display it
-# -------------------------------------------------------------------------
+# Save the Figure to HTML and Display it
 try:
     fig.write_html(output_html_path)
     print(f"Bar chart saved to HTML at: {output_html_path}")
@@ -419,20 +373,12 @@ print("Script complete.")
 # -------------------------------------------------------------------------
 import base64
 import io
-from pathlib import Path
-import pandas as pd
-import plotly.express as px
 from weasyprint import HTML
-import streamlit as st
 
-# --- Assume repo_root, current_dir, participant_df, and skill_df are defined earlier ---
-
-# --- Load Profession Data in Global Scope ---
+# Load Profession Data in Global Scope
 profession_data_path = repo_root / 'app-two' / 'data' / 'input' / 'Profession_Data.csv'
 try:
-    # Use utf-8-sig to handle BOM characters
     profession_df = pd.read_csv(profession_data_path, encoding='utf-8-sig')
-    # Normalize column names: strip whitespace and convert to lowercase.
     profession_df.columns = [col.strip().lower() for col in profession_df.columns]
     st.write("Profession Data columns:", profession_df.columns.tolist())
 except Exception as e:
@@ -454,7 +400,6 @@ lifestyle_columns = [
 ]
 
 # --- Helper Functions ---
-
 def format_as_dollars(value):
     """Convert a numeric value into a dollar-formatted string."""
     try:
@@ -504,7 +449,6 @@ def get_chart_image(chart_fig):
     """
     Renders the Plotly figure to a PNG image using kaleido,
     encodes it in base64, and returns an HTML <img> tag.
-    Chart size is increased by ~30% (max-width from 60% to 78%).
     """
     try:
         img_bytes = chart_fig.to_image(format="png")
@@ -522,9 +466,7 @@ def build_lifestyle_table(c_row):
     """
     Builds an HTML table with columns for each lifestyle category,
     including cell borders and cost values formatted as dollars.
-    Only the civilian participant's rows are shown.
     """
-    c_name = c_row.get("Name", "Civilian")
     table_html = f"""
     <table style="width:100%; border-collapse: collapse;" border="1">
       <thead>
@@ -552,16 +494,14 @@ def build_lifestyle_table(c_row):
     return table_html
 
 # --- Report Generation Functions ---
-
 def generate_pair_report(c_row, m_row):
     """
     Generates an HTML report for a civilian (c_row) and military (m_row) participant pair.
     Layout:
       - Title: "(Participant's Name)'s Financial Projection" (centered)
       - Professional details (left-aligned)
-      - A net worth chart (static image) aligned to the right, moved down by 0.5 inches (margin-top: -1.0in)
+      - A net worth chart (static image) aligned to the right
       - Profession descriptions for civilian and military with horizontal rules,
-        moved down by 2.25 inches
       - A two-row lifestyle table for the civilian participant with the table title centered above it
       - A note at the bottom of the page
     """
@@ -600,16 +540,14 @@ def generate_pair_report(c_row, m_row):
     min_val = min([v for v in c_values + m_values if v is not None], default=0)
     max_val = max([v for v in c_values + m_values if v is not None], default=0)
     chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
-    # Chart section now uses margin-top: -1.0in to move it down by an extra 0.5in from previous
     chart_html = get_chart_image(chart_fig)
     lifestyle_table_html = build_lifestyle_table(c_row)
     name_str = c_row.get("Name", "Participant")
-    # Note text added at bottom of page
     note_text = (
         "This sheet depicts a simple net worth calculation that considers only two values - your monthly savings "
         "compounding at 5% Annually, and your student debt, compounding at 6% Annually. The decisions that you made in the Budget Simulator program are displayed at the bottom, along with their associated costs. "
         "The intent of this sheet is to give you the ability to project how student debt will affect your purchase power in the future. Scholarships and grants are great ways to payfor training you will need "
-        "in your future profession. The Military is one of many employers who will help pay for your training and education for your job. If you go straight to work after graduation, the cost associated with"
+        "in your future profession. The Military is one of many employers who will help pay for your training and education for your job. If you go straight to work after graduation, the cost associated with "
         "that profession represents licensing, tools, and apprenticeships (if any)."
     )
     report_html = f"""
@@ -635,14 +573,13 @@ def generate_pair_report(c_row, m_row):
             margin-bottom: 10px;
             font-size: 11px;
           }}
-          /* Chart section moved down by using margin-top: -1.0in */
+          /* Net Worth Chart */
           .chart-section {{
-            margin-top: -1.0in;
             margin-bottom: 10px;
           }}
-          /* Description section moved down by 2.25 inches */
+          /* Description section moved 1 inch higher */
           .description-section {{
-            margin-top: 2.25in;
+            margin-top: 1.25in;
             font-size: 11px;
             margin-bottom: 10px;
           }}
@@ -657,7 +594,6 @@ def generate_pair_report(c_row, m_row):
             margin-top: 10px;
             font-size: 11px;
           }}
-          /* Center the table title */
           .lifestyle-title {{
             text-align: center;
             font-size: 12px;
@@ -673,7 +609,6 @@ def generate_pair_report(c_row, m_row):
             border: 1px solid #000;
             font-size: 10px;
           }}
-          /* Note section at bottom */
           .note-section {{
             margin-top: 10px;
             font-size: 10px;
@@ -684,22 +619,18 @@ def generate_pair_report(c_row, m_row):
         </style>
       </head>
       <body>
-        <!-- Title -->
         <div class="header">
           <h1>{name_str}'s Financial Projection</h1>
         </div>
-        <!-- Professional Details -->
         <div class="professional-details">
           <p><strong>Profession:</strong> {common_info.get("Profession")}</p>
           <p><strong>Annual Salary:</strong> {common_info.get("Average Salary")}</p>
           <p><strong>Years of School:</strong> {common_info.get("Years of School")}</p>
           <p><strong>Average Cost of School:</strong> {common_info.get("School Cost")}</p>
         </div>
-        <!-- Net Worth Chart -->
         <div class="chart-section">
           {chart_html}
         </div>
-        <!-- Profession Descriptions -->
         <div class="description-section">
           <h3>Profession Description</h3>
           <hr />
@@ -708,14 +639,12 @@ def generate_pair_report(c_row, m_row):
           <hr />
           <p>{military_desc}</p>
         </div>
-        <!-- Lifestyle Table -->
         <div class="lifestyle-section">
           <div class="lifestyle-title">
             <h3>Summary of Lifestyle Choices</h3>
           </div>
           {lifestyle_table_html}
         </div>
-        <!-- Note Section -->
         <div class="note-section">
           <p>{note_text}</p>
         </div>
@@ -748,7 +677,6 @@ def generate_combined_pdf_report(report_html_list, pdf_output_path):
     print(f"Combined PDF report saved to: {pdf_output_path}")
 
 # --- Main Loop: Generate Reports ---
-
 all_reports = []
 for index, row in participant_df.iterrows():
     name = row.get("Name", "").strip()
@@ -757,7 +685,6 @@ for index, row in participant_df.iterrows():
     mil_name = name + "-mil"
     mil_rows = participant_df[participant_df["Name"].str.strip() == mil_name]
     if mil_rows.empty:
-        print(f"No military counterpart found for {name}. Skipping report generation for this pair.")
         continue
     mil_row = mil_rows.iloc[0]
     report_html = generate_pair_report(row, mil_row)
@@ -767,13 +694,3 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
-
-
-
-
-
-
-
-
-
-
