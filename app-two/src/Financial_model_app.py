@@ -543,6 +543,13 @@ def generate_pair_report(c_row, m_row):
     max_val = max([v for v in c_values + m_values if v is not None], default=0)
     chart_fig.update_yaxes(range=[min_val - 50000, max_val + 50000])
     chart_fig.update_layout(height=fixed_chart_height)
+    chart_fig.update_layout(legend=dict(
+        orientation="h",
+        yanchor="top",
+        y=1.02,
+        xanchor="left",
+        x=1
+    ))
     chart_html = get_chart_image(chart_fig)
     
     lifestyle_table_html = build_lifestyle_table(c_row)
