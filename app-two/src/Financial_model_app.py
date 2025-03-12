@@ -492,11 +492,12 @@ def build_lifestyle_table(c_row):
 def generate_pair_report(c_row, m_row):
     """
     Generates an HTML report for a civilian (c_row) and military (m_row) participant pair.
-    Layout:
-      - Top block: Header and Professional details (Career Data)
-      - Middle block: Chart (dynamically reduced in height)
-      - Below Career Data: Profession Description (anchored ~20px below "Average Cost of School")
-      - Bottom block (anchored to the bottom of the page): Lifestyle table with title and Note text
+    The layout uses a flex container to anchor the bottom block (lifestyle table and note)
+    to the bottom of the page, while the top block (header, career data, chart, and description)
+    occupies the remaining space.
+    
+    - The Profession Description is anchored to start ~20px below the "Average Cost of School" line.
+    - The chart's height is reduced by 15% dynamically.
     """
     global profession_df
     common_info = get_common_info(c_row, skill_df)
@@ -509,11 +510,12 @@ def generate_pair_report(c_row, m_row):
     else:
         civilian_desc = "Description not available."
         military_desc = "Description not available."
+        
     years = [2024, 2035, 2045]
     c_values = [get_networth_at(c_row, 1), get_networth_at(c_row, 120), get_networth_at(c_row, 240)]
     m_values = [get_networth_at(m_row, 1), get_networth_at(m_row, 120), get_networth_at(m_row, 240)]
     
-    # Create chart and reduce its height by 15%
+    # Create the line chart and reduce its height by 15%
     chart_fig = px.line(
         x=years,
         y=c_values,
@@ -549,7 +551,7 @@ def generate_pair_report(c_row, m_row):
         "that profession represents licensing, tools, and apprenticeships (if any)."
     )
     
-    # Build the report using a page container.
+    # Build the HTML using a flex container to anchor the bottom block.
     report_html = f"""
     <html>
       <head>
@@ -560,13 +562,24 @@ def generate_pair_report(c_row, m_row):
             size: A4 landscape;
             margin: 1cm;
           }}
+          body {{
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+          }}
           .page-container {{
-            position: relative;
-            min-height: 100%;
-            /* Avoid breaking inside key sections */
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            justify-content: space-between;
+          }}
+          .top-block {{
+            /* Contains header, career data, chart, and description */
             page-break-inside: avoid;
           }}
-          .header, .professional-details, .chart-section, .description-section, .bottom-section {{
+          .bottom-block {{
+            /* Anchored to the bottom */
             page-break-inside: avoid;
           }}
           .header {{
@@ -581,12 +594,12 @@ def generate_pair_report(c_row, m_row):
             margin-bottom: 10px;
             font-size: 11px;
           }}
-          /* Chart section: no negative margin; let it flow normally */
           .chart-section {{
+            /* Chart appears below career data; adjust margin as needed */
             margin-top: 0.25in;
           }}
-          /* Description section: anchored 20px (approx. 0.25in) below career data */
           .description-section {{
+            /* Anchor the description about 20px (0.25in) below career data */
             margin-top: 0.25in;
             font-size: 11px;
             margin-bottom: 0.5in;
@@ -597,13 +610,6 @@ def generate_pair_report(c_row, m_row):
           }}
           .description-section hr {{
             margin-bottom: 5px;
-          }}
-          /* Bottom section: anchored to the bottom of the page */
-          .bottom-section {{
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
           }}
           .lifestyle-title {{
             text-align: center;
@@ -632,27 +638,29 @@ def generate_pair_report(c_row, m_row):
       </head>
       <body>
         <div class="page-container">
-          <div class="header">
-            <h1>{name_str}'s Financial Projection</h1>
+          <div class="top-block">
+            <div class="header">
+              <h1>{name_str}'s Financial Projection</h1>
+            </div>
+            <div class="professional-details">
+              <p><strong>Profession:</strong> {common_info.get("Profession")}</p>
+              <p><strong>Annual Salary:</strong> {common_info.get("Average Salary")}</p>
+              <p><strong>Years of School:</strong> {common_info.get("Years of School")}</p>
+              <p><strong>Average Cost of School:</strong> {common_info.get("School Cost")}</p>
+            </div>
+            <div class="chart-section">
+              {chart_html}
+            </div>
+            <div class="description-section">
+              <h3>Profession Description</h3>
+              <hr />
+              <p>{civilian_desc}</p>
+              <h3>Military Equivalent</h3>
+              <hr />
+              <p>{military_desc}</p>
+            </div>
           </div>
-          <div class="professional-details">
-            <p><strong>Profession:</strong> {common_info.get("Profession")}</p>
-            <p><strong>Annual Salary:</strong> {common_info.get("Average Salary")}</p>
-            <p><strong>Years of School:</strong> {common_info.get("Years of School")}</p>
-            <p><strong>Average Cost of School:</strong> {common_info.get("School Cost")}</p>
-          </div>
-          <div class="chart-section">
-            {chart_html}
-          </div>
-          <div class="description-section">
-            <h3>Profession Description</h3>
-            <hr />
-            <p>{civilian_desc}</p>
-            <h3>Military Equivalent</h3>
-            <hr />
-            <p>{military_desc}</p>
-          </div>
-          <div class="bottom-section">
+          <div class="bottom-block">
             <div class="lifestyle-section">
               <div class="lifestyle-title">
                 <h3>Summary of Lifestyle Choices</h3>
@@ -710,6 +718,7 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
 
    
