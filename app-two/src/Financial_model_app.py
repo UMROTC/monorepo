@@ -380,7 +380,8 @@ profession_data_path = repo_root / 'app-two' / 'data' / 'input' / 'Profession_Da
 try:
     profession_df = pd.read_csv(profession_data_path, encoding='utf-8-sig')
     profession_df.columns = [col.strip().lower() for col in profession_df.columns]
-    st.write("Profession Data columns:", profession_df.columns.tolist())
+    # Remove debug output below if not needed:
+    # st.write("Profession Data columns:", profession_df.columns.tolist())
 except Exception as e:
     st.error(f"Error loading Profession Data file: {e}")
     st.stop()
@@ -502,7 +503,7 @@ def generate_pair_report(c_row, m_row):
       - Professional details (left-aligned)
       - A net worth chart (static image) aligned to the right
       - Profession descriptions for civilian and military with horizontal rules,
-      - A two-row lifestyle table for the civilian participant with the table title centered above it
+      - A two-row lifestyle table for the civilian participant with the table title anchored to its table
       - A note at the bottom of the page
     """
     global profession_df
@@ -573,13 +574,13 @@ def generate_pair_report(c_row, m_row):
             margin-bottom: 10px;
             font-size: 11px;
           }}
-          /* Net Worth Chart */
+          /* Net Worth Chart moved up by reducing bottom margin */
           .chart-section {{
-            margin-bottom: 10px;
+            margin-bottom: -0.75in;
           }}
-          /* Description section moved up by reducing top margin to 1.25in */
+          /* Description section moved up by reducing top margin to 0.5in */
           .description-section {{
-            margin-top: 1.25in;
+            margin-top: 0.5in;
             font-size: 11px;
             margin-bottom: 10px;
           }}
@@ -590,8 +591,9 @@ def generate_pair_report(c_row, m_row):
           .description-section hr {{
             margin-bottom: 5px;
           }}
+          /* Lifestyle section anchored to its table with no extra top margin */
           .lifestyle-section {{
-            margin-top: 10px;
+            margin-top: 0;
             font-size: 11px;
           }}
           .lifestyle-title {{
@@ -694,5 +696,6 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
 
