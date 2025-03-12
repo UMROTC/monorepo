@@ -580,7 +580,7 @@ def generate_pair_report(c_row, m_row):
           }}
           /* Description section moved up by reducing top margin to 0.5in */
           .description-section {{
-            margin-top: 0.5in;
+            margin-top: 0.75in;
             font-size: 11px;
             margin-bottom: 10px;
           }}
