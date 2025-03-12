@@ -577,9 +577,9 @@ def generate_pair_report(c_row, m_row):
           .chart-section {{
             margin-top: -1.0in;
           }}
-          /* Description section: move text columns down an extra 1.5" by setting top margin to 2.75in */
+          /* Description section: set top margin to 2.0in (moved up by 0.75in from previous 2.75in) */
           .description-section {{
-            margin-top: 2.75in;
+            margin-top: 2.0in;
             font-size: 11px;
             margin-bottom: 0.85in;
           }}
