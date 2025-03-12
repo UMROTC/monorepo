@@ -573,15 +573,15 @@ def generate_pair_report(c_row, m_row):
             margin-bottom: 10px;
             font-size: 11px;
           }}
-          /* Chart section: move up further with a -2.0in bottom margin */
+          /* Chart section remains unchanged */
           .chart-section {{
             margin-top: -1.0in;
           }}
-          /* Description section: move down with a 1.25in top margin */
+          /* Description section: move text columns down an extra 1.5" by setting top margin to 2.75in */
           .description-section {{
-            margin-bottom: .85in
+            margin-top: 2.75in;
             font-size: 11px;
-        
+            margin-bottom: 0.85in;
           }}
           .description-section h3 {{
             margin-bottom: 5px;
@@ -590,9 +590,9 @@ def generate_pair_report(c_row, m_row):
           .description-section hr {{
             margin-bottom: 5px;
           }}
-          /* Lifestyle section: move table up by using a negative top margin */
+          /* Lifestyle section: move table up with a -0.75in top margin */
           .lifestyle-section {{
-            margin-top: -.75in;
+            margin-top: -0.75in;
             font-size: 11px;
           }}
           .lifestyle-title {{
@@ -696,3 +696,4 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
