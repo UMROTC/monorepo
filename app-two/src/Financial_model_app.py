@@ -579,9 +579,9 @@ def generate_pair_report(c_row, m_row):
           }}
           /* Description section: move text columns down an extra 1.5" by setting top margin to 2.75in */
           .description-section {{
-            margin-top: 1.80in;
+            margin-top: 2.75in;
             font-size: 11px;
-            margin-bottom: -.95;
+            margin-bottom: 0.85in;
           }}
           .description-section h3 {{
             margin-bottom: 5px;
@@ -696,4 +696,5 @@ pdf_output_path = current_dir.parent / "data" / "output" / "combined_reports.pdf
 generate_combined_pdf_report(all_reports, pdf_output_path)
 
 st.write(f"Combined PDF report generated at: {pdf_output_path}")
+
 
